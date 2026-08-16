@@ -22,6 +22,15 @@ export default tseslint.config(
       }],
     },
   },
+  // The repository tsconfig excludes tests from the application project; parse the CI smoke test without project-service type information.
+  {
+    files: ['src/smoke.test.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
+    },
+  },
   // Ban all imports from @tauri-apps/api/event — all events flow through WS now
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],

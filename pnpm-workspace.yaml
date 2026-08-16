@@ -4,3 +4,8 @@ packages:
   - "migrations"
   - "server"
   - "sidecar"
+allowBuilds:
+  esbuild: true
+  node-pty: true
+  sharp: true
+  workerd: true
