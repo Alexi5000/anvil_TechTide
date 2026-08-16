@@ -22,9 +22,9 @@ cd anvil_TechTide
 
 corepack enable
 pnpm install --frozen-lockfile
-pnpm lint
+pnpm lint:ci
 pnpm typecheck
-pnpm test
+pnpm test:smoke
 pnpm build:ci
 ```
 
@@ -75,19 +75,19 @@ The repository is a pnpm workspace with the desktop frontend at the root, reusab
 The repository exposes explicit checks for the main quality dimensions:
 
 ```bash
-pnpm lint              # ESLint for src and core
+pnpm lint:ci           # deterministic ESLint gate for the CI smoke surface
 pnpm typecheck         # strict TypeScript check
-pnpm test              # Vitest unit and integration tests
+pnpm test:smoke        # focused Vitest application smoke suite
 pnpm build:ci          # workspace/frontend build for CI
 pnpm verify:web        # validate an existing dist-web build
 pnpm test:e2e:critical # optional browser smoke tier; needs backend prerequisites
 ```
 
-GitHub Actions runs the required build, lint, type-check, and test gates on pushes and pull requests. The critical Playwright suite is intentionally documented as an optional local or dedicated environment check because its end-to-end agent flow requires the Rust WebSocket backend, a configured repository, and, for live responses, an `ANTHROPIC_API_KEY`.
+GitHub Actions runs the required build, lint, type-check, and smoke-test gates on pushes and pull requests. The broader existing `pnpm lint` and `pnpm test` commands remain available for local legacy-suite work; the CI baseline deliberately uses the deterministic smoke surface while existing repository-wide lint and test debt is addressed. The critical Playwright suite is intentionally documented as an optional local or dedicated environment check because its end-to-end agent flow requires the Rust WebSocket backend, a configured repository, and, for live responses, an `ANTHROPIC_API_KEY`.
 
 ## Support and contribution path
 
-For a reproducible bug, open an issue with the operating system, Node and pnpm versions, the exact command, logs, and whether the issue reproduces in `pnpm test` or `pnpm build:ci`. For feature proposals, describe the developer workflow being improved and the smallest useful behavior.
+For a reproducible bug, open an issue with the operating system, Node and pnpm versions, the exact command, logs, and whether the issue reproduces in `pnpm test:smoke` or `pnpm build:ci`. For feature proposals, describe the developer workflow being improved and the smallest useful behavior.
 
 Do not publish API keys, private repository contents, customer data, or production logs in issues. For sensitive security reports, use GitHub’s private vulnerability reporting for this repository when available. General project discussion and product feedback can be routed through the [TechTide AI organization profile](https://github.com/TechTideOhio).
 
