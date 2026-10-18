@@ -14,7 +14,7 @@
     "dev:sdk": "cd core/sdk && pnpm build:watch",
     "dev:migrations": "cd migrations && pnpm build:watch",
     "build": "./scripts/build-anvil.sh",
-    "build:ci": "node scripts/verify-braces.cjs && pnpm build:frontend",
+    "build:ci": "node scripts/verify-braces.cjs && node scripts/verify-forge.cjs agents/package.json && pnpm build:frontend",
     "build:frontend": "pnpm build:agents && pnpm build:sdk && pnpm build:migrations && pnpm sidecar:build && tsc && vite build",
     "build:agents": "cd agents && pnpm build",
     "build:sdk": "cd core/sdk && pnpm build",

@@ -25,8 +25,8 @@ importers:
         specifier: ^5.1.16
         version: 5.1.16
       node-forge:
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: file:../vendor/node-forge-1.4.0.tgz
+        version: file:../vendor/node-forge-1.4.0.tgz
       sucrase:
         specifier: ^3.35.1
         version: 3.35.1
@@ -884,8 +884,9 @@ packages:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
 
-  node-forge@1.4.0:
-    resolution: {integrity: sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==}
+  node-forge@file:../vendor/node-forge-1.4.0.tgz:
+    resolution: {integrity: sha512-xL71evkzfyT4AGifJa1GIl7otUNcJcX6WZV/AMJFJzzai0Yf1ANhGnXl7p1fBupuWgWQQK6JAsi+5UNKJskqoA==, tarball: file:../vendor/node-forge-1.4.0.tgz}
+    version: 1.4.0
     engines: {node: '>= 6.13.0'}
 
   object-assign@4.1.1:
@@ -1951,7 +1952,7 @@ snapshots:
     dependencies:
       content-type: 2.1.0
 
-  node-forge@1.4.0: {}
+  node-forge@file:../vendor/node-forge-1.4.0.tgz: {}
 
   object-assign@4.1.1: {}
 

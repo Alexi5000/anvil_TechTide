@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/runner.js",
   "scripts": {
-    "build": "tsup",
+    "build": "node ../scripts/verify-forge.cjs agents/package.json && tsup",
     "build:watch": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -18,7 +18,7 @@
     "@anthropic-ai/sdk": "^0.74.0",
     "glob": "^13.0.6",
     "nanoid": "^5.1.16",
-    "node-forge": "^1.4.0",
+    "node-forge": "file:../vendor/node-forge-1.4.0.tgz",
     "sucrase": "^3.35.1",
     "ws": "^8.22.0",
     "zod": "^4.6.7"
