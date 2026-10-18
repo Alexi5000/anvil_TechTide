@@ -26,7 +26,9 @@
       "shell-quote": "^1.8.5",
       "brace-expansion@2": "^2.1.7",
       "minimatch@5": "^5.1.8",
-      "diff@>=6 <8.0.3": "^8.0.3"
+      "diff@>=6 <8.0.3": "^8.0.3",
+      "vite@>=7 <7.3.5": "^7.3.5",
+      "esbuild@>=0.27 <0.28.1": "^0.28.2"
     }
   },
   "devDependencies": {
@@ -34,7 +36,8 @@
     "@types/node": "^20.19.43",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "vite": "^7.3.5"
   },
   "overrides": {
     "fast-uri": "^3.1.8",

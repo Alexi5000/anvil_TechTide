@@ -72,3 +72,6 @@ tiny_http = "0.12"
 
 [profile.release]
 debug = 1  # Line tables for profiling symbol resolution
+
+[patch.crates-io]
+glib = { path = "vendor/glib" }
