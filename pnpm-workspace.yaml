@@ -1,11 +1,18 @@
 packages:
-  - "agents"
-  - "core/*"
-  - "migrations"
-  - "server"
-  - "sidecar"
+- agents
+- core/*
+- migrations
+- server
+- sidecar
 allowBuilds:
   esbuild: true
   node-pty: true
   sharp: true
   workerd: true
+overrides:
+  diff@>=6 <8.0.3: ^8.0.3
+  esbuild@>=0.27 <0.28.1: ^0.28.2
+  katex@<0.18.2: ^0.19.0
+  postcss-selector-parser@<7.1.6: ^7.1.6
+  braces: file:vendor/braces-3.0.3.tgz
+  rollup: 4.64.7
