@@ -9,9 +9,18 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "fastify": "^4.26.2"
+    "fastify": "^5.12.7"
   },
-  "keywords": ["fastify", "api", "anvil"],
+  "keywords": [
+    "fastify",
+    "api",
+    "anvil"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "pnpm": {
+    "overrides": {
+      "fast-uri": "^3.1.8"
+    }
+  }
 }
