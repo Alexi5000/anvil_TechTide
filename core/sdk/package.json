@@ -11,13 +11,16 @@
     "test:integration": "vitest run --dir __tests__/integration"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild", "@esbuild/darwin-arm64"]
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "@esbuild/darwin-arm64"
+    ]
   },
   "devDependencies": {
-    "esbuild": "^0.20.2",
-    "vitest": "^4.0.14"
+    "esbuild": "^0.28.2",
+    "vitest": "^4.1.12"
   },
   "dependencies": {
-    "zod": "^4.3.5"
+    "zod": "^4.6.7"
   }
 }
