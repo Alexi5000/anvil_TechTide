@@ -65,7 +65,8 @@ core-graphics = "0.24"
 core-foundation = "0.10"
 
 [target.'cfg(unix)'.dependencies]
-pprof = { version = "0.14", features = ["flamegraph", "prost-codec"] }
+pprof = { version = "0.15", features = ["prost-codec"] }
+inferno = { version = "0.12.8", default-features = false, features = ["nameattr"] }
 
 [dev-dependencies]
 tiny_http = "0.12"

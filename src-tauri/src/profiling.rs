@@ -6,6 +6,10 @@
 use std::sync::Mutex;
 use tauri::Manager;
 
+#[cfg(unix)]
+#[path = "profile_flamegraph.rs"]
+mod profile_flamegraph;
+
 /// State to prevent concurrent profiling sessions.
 pub struct ProfilingState(pub Mutex<bool>);
 
@@ -70,7 +74,8 @@ async fn run_cpu_profile(app: &tauri::AppHandle, duration_secs: u64) -> Result<S
     let svg_path = logs_dir.join(format!("cpu-profile-{}.svg", timestamp));
 
     let svg_file = File::create(&svg_path).map_err(|e| format!("Failed to create SVG: {}", e))?;
-    report.flamegraph(svg_file).map_err(|e| format!("Failed to write flamegraph: {}", e))?;
+    profile_flamegraph::write_flamegraph(&report, svg_file)
+        .map_err(|e| format!("Failed to write flamegraph: {}", e))?;
 
     // Write protobuf for further analysis (compatible with `go tool pprof`)
     let proto_path = logs_dir.join(format!("cpu-profile-{}.pb", timestamp));
