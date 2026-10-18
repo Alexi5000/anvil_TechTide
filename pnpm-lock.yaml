@@ -11,6 +11,7 @@ overrides:
   postcss-selector-parser@<7.1.6: ^7.1.6
   braces: file:vendor/braces-3.0.3.tgz
   rollup: 4.64.7
+  node-forge: file:vendor/node-forge-1.4.0.tgz
 
 importers:
 
@@ -333,8 +334,8 @@ importers:
         specifier: ^5.1.16
         version: 5.1.16
       node-forge:
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: file:../vendor/node-forge-1.4.0.tgz
+        version: file:vendor/node-forge-1.4.0.tgz
       sucrase:
         specifier: ^3.35.1
         version: 3.35.1
@@ -4235,8 +4236,9 @@ packages:
   node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
 
-  node-forge@1.4.0:
-    resolution: {integrity: sha512-LarFH0+6VfriEhqMMcLX2F7SwSXeWwnEAJEsYm5QKWchiVYVvJyV9v7UDvUv+w5HO23ZpQTXDv/GxdDdMyOuoQ==}
+  node-forge@file:vendor/node-forge-1.4.0.tgz:
+    resolution: {integrity: sha512-xL71evkzfyT4AGifJa1GIl7otUNcJcX6WZV/AMJFJzzai0Yf1ANhGnXl7p1fBupuWgWQQK6JAsi+5UNKJskqoA==, tarball: file:vendor/node-forge-1.4.0.tgz}
+    version: 1.4.0
     engines: {node: '>= 6.13.0'}
 
   node-pty@1.1.0:
@@ -9503,7 +9505,7 @@ snapshots:
 
   node-addon-api@7.1.1: {}
 
-  node-forge@1.4.0: {}
+  node-forge@file:vendor/node-forge-1.4.0.tgz: {}
 
   node-pty@1.1.0:
     dependencies:

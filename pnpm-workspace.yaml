@@ -16,3 +16,4 @@ overrides:
   postcss-selector-parser@<7.1.6: ^7.1.6
   braces: file:vendor/braces-3.0.3.tgz
   rollup: 4.64.7
+  node-forge: file:vendor/node-forge-1.4.0.tgz
