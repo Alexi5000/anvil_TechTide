@@ -1,3 +1,5 @@
+#![cfg(unix)]
+
 #[path = "../src/profile_flamegraph.rs"]
 mod profile_flamegraph;
 
