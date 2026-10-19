@@ -6,6 +6,7 @@
  */
 
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
@@ -75,7 +76,13 @@ app.use("/hooks", createHookRouter({
 
 // ── File server (/files?path=<absolute-path>) ──────────────────────────
 
-app.get("/files", createFileHandler());
+app.get("/files", rateLimit({
+  windowMs: 60_000,
+  limit: 120,
+  keyGenerator: () => "sidecar-files",
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+}), createFileHandler());
 
 // ── Health check ────────────────────────────────────────────────────────
 

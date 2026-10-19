@@ -7,28 +7,18 @@ import { lookup } from "mime-types";
 
 export function createFileHandler(options: {
   maxConcurrent?: number;
-  requestsPerMinute?: number;
   timeoutMs?: number;
 } = {}): RequestHandler {
   const maxConcurrent = options.maxConcurrent ?? 4;
-  const requestsPerMinute = options.requestsPerMinute ?? 120;
   const timeoutMs = options.timeoutMs ?? 60_000;
   let active = 0;
-  let windowStart = Date.now();
-  let requests = 0;
 
   return async (req, res) => {
-    const now = Date.now();
-    if (now - windowStart >= 60_000) {
-      windowStart = now;
-      requests = 0;
-    }
-    if (active >= maxConcurrent || requests >= requestsPerMinute) {
+    if (active >= maxConcurrent) {
       res.setHeader("Retry-After", "60");
       res.status(429).send("File request limit reached");
       return;
     }
-    requests++;
     const filePath = req.query.path;
     if (typeof filePath !== "string" || !filePath || filePath.includes("\0")) {
       res.status(400).send("Missing or invalid 'path' query parameter");

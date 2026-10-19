@@ -1,4 +1,5 @@
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import { createServer, get, type Server } from "node:http";
 import { mkdtemp, writeFile, rm, symlink, open } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
@@ -21,7 +22,7 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-async function start(options = {}) {
+async function start(options: { maxConcurrent?: number; requestsPerMinute?: number; timeoutMs?: number } = {}) {
   const app = express();
   app.use((req, res, next) => {
     if (req.headers.authorization !== "Bearer test-token") {
@@ -30,7 +31,13 @@ async function start(options = {}) {
     }
     next();
   });
-  app.get("/files", createFileHandler(options));
+  app.get("/files", rateLimit({
+    windowMs: 60_000,
+    limit: options.requestsPerMinute ?? 120,
+    keyGenerator: () => "sidecar-files",
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+  }), createFileHandler(options));
   server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
