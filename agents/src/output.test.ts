@@ -5,6 +5,13 @@
  * This ensures UI can safely read from disk when it receives the event signal.
  */
 
+import { mkdtempSync as makePrivateFixture, rmSync as removePrivateFixture } from "node:fs";
+import { join as privateJoin } from "node:path";
+import { tmpdir as fixtureTmpRoot } from "node:os";
+import { afterAll as cleanupPrivateFixture } from "vitest";
+const privateFixture = makePrivateFixture(privateJoin(fixtureTmpRoot(), "anvil-fixture-"));
+cleanupPrivateFixture(() => removePrivateFixture(privateFixture, { recursive: true, force: true }));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ThreadWriter } from "./services/thread-writer.js";
 
@@ -55,7 +62,7 @@ describe("output.ts - disk-before-emit ordering", () => {
     const diskWritePromise = new Promise<string>((resolve) => {
       diskWriteResolve = () => {
         callOrder.push("disk-write-async");
-        resolve("/tmp/test-thread/state.json");
+        resolve(privateJoin(privateFixture, "test-thread/state.json"));
       };
     });
 
@@ -64,13 +71,13 @@ describe("output.ts - disk-before-emit ordering", () => {
       writeState: vi.fn(() => diskWritePromise),
       writeMetadata: vi.fn(),
       write: vi.fn(),
-      getCachedPath: vi.fn(() => "/tmp/test-thread"),
+      getCachedPath: vi.fn(() => privateJoin(privateFixture, "test-thread")),
       setCachedPath: vi.fn(),
     } as unknown as ThreadWriter;
 
     // Initialize state WITH ThreadWriter (uses async write)
     // Resolve immediately for init to complete
-    const initPromise = initState("/tmp/test-thread", "/tmp/workdir", [], mockThreadWriter);
+    const initPromise = initState(privateJoin(privateFixture, "test-thread"), privateJoin(privateFixture, "workdir"), [], mockThreadWriter);
     diskWriteResolve();
     await initPromise;
   });
@@ -88,7 +95,7 @@ describe("output.ts - disk-before-emit ordering", () => {
     const writePromise = new Promise<string>((resolve) => {
       resolveWrite = () => {
         callOrder.push("disk-write-async");
-        resolve("/tmp/test-thread/state.json");
+        resolve(privateJoin(privateFixture, "test-thread/state.json"));
       };
     });
     (mockThreadWriter.writeState as ReturnType<typeof vi.fn>).mockReturnValue(writePromise);
@@ -111,7 +118,7 @@ describe("output.ts - disk-before-emit ordering", () => {
     callOrder = [];
 
     // Create a new promise that resolves immediately
-    (mockThreadWriter.writeState as ReturnType<typeof vi.fn>).mockResolvedValue("/tmp/test-thread/state.json");
+    (mockThreadWriter.writeState as ReturnType<typeof vi.fn>).mockResolvedValue(privateJoin(privateFixture, "test-thread/state.json"));
 
     await emitState();
     expect(mockThreadWriter.writeState).toHaveBeenCalled();
@@ -131,7 +138,7 @@ describe("output.ts - thread_action messages via hub", () => {
       connectionState: "connected",
     } as unknown as Parameters<typeof setHubClient>[0]);
 
-    await initState("/tmp/test-thread", "/tmp/workdir");
+    await initState(privateJoin(privateFixture, "test-thread"), privateJoin(privateFixture, "workdir"));
   });
 
   it("sends thread_action with INIT action on initState", () => {
@@ -160,7 +167,7 @@ describe("output.ts - thread_action messages via hub", () => {
     expect(arg.type).toBe("thread_action");
     expect(arg.action.type).toBe("HYDRATE");
     expect(arg.action.payload.state).toBeDefined();
-    expect(arg.action.payload.state.workingDirectory).toBe("/tmp/workdir");
+    expect(arg.action.payload.state.workingDirectory).toBe(privateJoin(privateFixture, "workdir"));
   });
 });
 
@@ -169,7 +176,7 @@ describe("output.ts - StoredMessage ID handling", () => {
     callOrder = [];
     vi.clearAllMocks();
     setHubClient(null as unknown as Parameters<typeof setHubClient>[0]);
-    await initState("/tmp/test-thread", "/tmp/workdir");
+    await initState(privateJoin(privateFixture, "test-thread"), privateJoin(privateFixture, "workdir"));
   });
 
   it("appendAssistantMessage stores the provided id", async () => {
@@ -193,7 +200,7 @@ describe("output.ts - StoredMessage ID handling", () => {
       { id: "id-1", role: "user", content: "Hello" },
       { id: "id-2", role: "assistant", content: "Hi" },
     ];
-    await initState("/tmp/test-thread", "/tmp/workdir", prior);
+    await initState(privateJoin(privateFixture, "test-thread"), privateJoin(privateFixture, "workdir"), prior);
 
     const msgs = getMessages();
     expect(msgs).toHaveLength(2);
