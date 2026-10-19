@@ -179,13 +179,14 @@ export function readFileIfExistsSync(path: string): string | null {
 export function readFileWithStatSync(path: string): { content: string; stat: fs.Stats } | null {
   let fd: number;
   try {
-    fd = fs.openSync(path, "r");
+    fd = fs.openSync(path, fs.constants.O_RDONLY | (fs.constants.O_NONBLOCK ?? 0));
   } catch (err) {
     if (isErrnoException(err, "ENOENT")) return null;
     throw err;
   }
   try {
     const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) throw Object.assign(new Error("Expected a regular file"), { code: "EINVAL" });
     return { content: fs.readFileSync(fd, "utf-8"), stat };
   } finally {
     fs.closeSync(fd);

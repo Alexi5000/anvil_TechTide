@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync, chmodSync, statSync, symlinkSync, lstatSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -9,6 +10,13 @@ const dirs: string[] = [];
 function scratch() { const dir = mkdtempSync(join(tmpdir(), 'anvil-fs-test-')); dirs.push(dir); return dir; }
 afterEach(() => { for (const dir of dirs.splice(0)) rmSync(dir, {recursive: true, force: true}); });
 describe('agent state filesystem operations', () => {
+  it('rejects FIFO reads without waiting for a writer', async () => {
+    if (process.platform === 'win32') return;
+    const path = join(scratch(), 'pipe');
+    expect(spawnSync('mkfifo', [path]).status).toBe(0);
+    expect(() => readFileIfExistsSync(path)).toThrow('Expected a regular file');
+    expect((await readFileWithStat(path))?.content).toBeNull();
+  });
   it('creates isolated owner-only temporary directories', () => {
     const root = scratch();
     const one = createPrivateTempDir('agent-', root);
