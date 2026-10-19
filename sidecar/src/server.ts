@@ -12,7 +12,7 @@ import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { unlink, mkdir } from "node:fs/promises";
 import { writeFileAtomic } from "@core/lib/secure-fs.js";
-import { join } from "node:path";
+import { join, isAbsolute } from "node:path";
 import { createFileHandler } from "./file-handler.js";
 import { handleConnection } from "./ws-handler.js";
 import { createState } from "./state.js";
@@ -25,6 +25,17 @@ const MAX_PORT_RETRIES = 10;
 const APP_SUFFIX = process.env.ANVIL_APP_SUFFIX ?? "";
 const DATA_DIR = process.env.ANVIL_DATA_DIR ?? "";
 const NO_AUTH = process.env.ANVIL_SIDECAR_NO_AUTH === "1";
+
+function fileAllowlist(name: string): string[] {
+  const value: unknown = JSON.parse(process.env[name] ?? "[]");
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && isAbsolute(item))) {
+    throw new Error(`${name} must be a JSON array of absolute paths`);
+  }
+  return value;
+}
+
+const FILE_ROOTS = fileAllowlist("ANVIL_FILE_ROOTS");
+const SELECTED_FILES = fileAllowlist("ANVIL_SELECTED_FILES");
 
 let actualPort = BASE_PORT;
 const authToken = randomBytes(32).toString("hex");
@@ -82,7 +93,7 @@ app.get("/files", rateLimit({
   keyGenerator: () => "sidecar-files",
   standardHeaders: "draft-8",
   legacyHeaders: false,
-}), createFileHandler());
+}), createFileHandler({ roots: FILE_ROOTS, files: SELECTED_FILES }));
 
 // ── Health check ────────────────────────────────────────────────────────
 

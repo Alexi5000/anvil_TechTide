@@ -22,7 +22,7 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-async function start(options: { maxConcurrent?: number; requestsPerMinute?: number; timeoutMs?: number } = {}) {
+async function start(options: { maxConcurrent?: number; requestsPerMinute?: number; timeoutMs?: number; roots?: string[]; files?: string[] } = {}) {
   const app = express();
   app.use((req, res, next) => {
     if (req.headers.authorization !== "Bearer test-token") {
@@ -37,7 +37,7 @@ async function start(options: { maxConcurrent?: number; requestsPerMinute?: numb
     keyGenerator: () => "sidecar-files",
     standardHeaders: "draft-8",
     legacyHeaders: false,
-  }), createFileHandler(options));
+  }), createFileHandler({ roots: [dir], ...options }));
   server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
@@ -72,6 +72,41 @@ test("rejects directories, missing paths, and invalid path input", async () => {
   expect((await read(join(dir, "missing"))).status).toBe(404);
   expect((await read("bad\0path")).status).toBe(400);
   expect((await read("")).status).toBe(400);
+});
+
+test("denies all file access when no workspace or file is selected", async () => {
+  const path = join(dir, "private.txt");
+  await writeFile(path, "secret");
+  await start({ roots: [] });
+  expect((await read(path)).status).toBe(403);
+});
+
+test("permits only explicitly selected files outside workspace roots", async () => {
+  const selected = join(dir, "selected.txt");
+  const other = join(dir, "other.txt");
+  await writeFile(selected, "selected");
+  await writeFile(other, "private");
+  await start({ roots: [], files: [selected] });
+  expect(await (await read(selected)).text()).toBe("selected");
+  expect((await read(other)).status).toBe(403);
+});
+
+test("rejects traversal, sibling prefixes, and symlink escapes", async () => {
+  const { mkdir } = await import("node:fs/promises");
+  const root = join(dir, "workspace");
+  const sibling = join(dir, "workspace-other");
+  await mkdir(root);
+  await mkdir(sibling);
+  const secret = join(sibling, "private.txt");
+  await writeFile(secret, "secret");
+  await symlink(secret, join(root, "link.txt"));
+  await symlink(sibling, join(root, "linked-directory"));
+  await start({ roots: [root] });
+  for (const path of [secret, `${root}/../workspace-other/private.txt`, join(root, "link.txt"), join(root, "linked-directory/private.txt")]) {
+    const result = await read(path);
+    expect(result.status).toBe(403);
+    expect(await result.text()).not.toContain("secret");
+  }
 });
 
 test("returns empty files and preserves multi-megabyte binary files", async () => {
