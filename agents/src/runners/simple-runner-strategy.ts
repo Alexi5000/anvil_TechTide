@@ -1,4 +1,5 @@
-import { mkdirSync, writeFileSync, readFileSync, existsSync, statSync, readdirSync } from "fs";
+import { mkdirSync, existsSync, statSync, readdirSync } from "fs";
+import { readFileIfExistsSync, writeFileAtomicSync } from "@core/lib/secure-fs.js";
 import type { TokenUsage } from "@core/types/events.js";
 import { execFileSync } from "child_process";
 import { join } from "path";
@@ -66,12 +67,9 @@ function isWorktreeRenamed(anvilDir: string, repoId: string, worktreeId: string)
 
     for (const repoDir of repoDirs) {
       const settingsPath = join(reposDir, repoDir, "settings.json");
-      if (!existsSync(settingsPath)) {
-        continue;
-      }
-
       try {
-        const content = readFileSync(settingsPath, "utf-8");
+        const content = readFileIfExistsSync(settingsPath);
+        if (content === null) continue;
         const parsed = RepositorySettingsSchema.safeParse(JSON.parse(content));
         if (!parsed.success) {
           continue;
@@ -125,12 +123,9 @@ function isMainWorktree(anvilDir: string, repoId: string, worktreeId: string): b
 
     for (const repoDir of repoDirs) {
       const settingsPath = join(reposDir, repoDir, "settings.json");
-      if (!existsSync(settingsPath)) {
-        continue;
-      }
-
       try {
-        const content = readFileSync(settingsPath, "utf-8");
+        const content = readFileIfExistsSync(settingsPath);
+        if (content === null) continue;
         const parsed = RepositorySettingsSchema.safeParse(JSON.parse(content));
         if (!parsed.success) {
           continue;
@@ -329,15 +324,22 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
     const now = Date.now();
 
     // Check if this is a resume scenario (historyFile provided and thread metadata exists)
-    const isResume = historyFile && existsSync(threadMetadataPath);
+    let resumeContent: string | null = null;
+    if (historyFile) {
+      try {
+        resumeContent = readFileIfExistsSync(threadMetadataPath);
+      } catch (err) {
+        emitLog("ERROR", `Failed to read thread metadata during resume: ${err}`);
+        throw new Error("Failed to resume: could not read thread metadata");
+      }
+    }
 
-    if (isResume) {
+    if (resumeContent !== null) {
       // Resume scenario: add a new turn to existing thread
       emitLog("INFO", `Resuming existing thread ${threadId}`);
 
       try {
-        const existingContent = readFileSync(threadMetadataPath, "utf-8");
-        const parseResult = SimpleThreadMetadataSchema.safeParse(JSON.parse(existingContent));
+        const parseResult = SimpleThreadMetadataSchema.safeParse(JSON.parse(resumeContent));
 
         if (parseResult.success) {
           const existingMetadata = parseResult.data;
@@ -361,7 +363,7 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
             ],
           };
 
-          writeFileSync(threadMetadataPath, JSON.stringify(updatedMetadata, null, 2));
+          writeFileAtomicSync(threadMetadataPath, JSON.stringify(updatedMetadata, null, 2));
 
           // Emit thread:updated event (not thread:created)
           emitEvent("thread:updated", {
@@ -426,7 +428,7 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
         ],
       };
 
-      writeFileSync(threadMetadataPath, JSON.stringify(threadMetadata, null, 2));
+      writeFileAtomicSync(threadMetadataPath, JSON.stringify(threadMetadata, null, 2));
 
       // Emit thread:created event
       emitEvent("thread:created", {
@@ -491,8 +493,8 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
     try {
       // 1. Update thread metadata
       const threadMetadataPath = join(threadPath, "metadata.json");
-      if (existsSync(threadMetadataPath)) {
-        const existingContent = readFileSync(threadMetadataPath, "utf-8");
+      const existingContent = readFileIfExistsSync(threadMetadataPath);
+      if (existingContent !== null) {
         const parseResult = SimpleThreadMetadataSchema.safeParse(JSON.parse(existingContent));
 
         if (parseResult.success) {
@@ -509,14 +511,15 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
           let lastCallUsage: TokenUsage | undefined;
           let cumulativeUsage: TokenUsage | undefined;
           const statePath = join(threadPath, "state.json");
-          if (existsSync(statePath)) {
-            try {
-              const stateRaw = JSON.parse(readFileSync(statePath, "utf-8"));
+          try {
+            const stateContent = readFileIfExistsSync(statePath);
+            if (stateContent !== null) {
+              const stateRaw = JSON.parse(stateContent);
               lastCallUsage = stateRaw.lastCallUsage;
               cumulativeUsage = stateRaw.cumulativeUsage;
-            } catch {
-              // Best-effort: usage may already be in metadata from updateUsage()
             }
+          } catch {
+            // Best-effort: usage may already be in metadata from updateUsage()
           }
 
           const updated: SimpleThreadMetadata = {
@@ -528,7 +531,7 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
             ...(lastCallUsage && { lastCallUsage }),
             ...(cumulativeUsage && { cumulativeUsage }),
           };
-          writeFileSync(threadMetadataPath, JSON.stringify(updated, null, 2));
+          writeFileAtomicSync(threadMetadataPath, JSON.stringify(updated, null, 2));
         } else {
           emitLog("ERROR", `Invalid thread metadata during cleanup: ${parseResult.error.message}`);
         }
@@ -564,9 +567,9 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
       .then(async ({ name, usedFallback }) => {
         // Update thread metadata with name
         const threadMetadataPath = join(threadPath, "metadata.json");
-        if (existsSync(threadMetadataPath)) {
-          try {
-            const existingContent = readFileSync(threadMetadataPath, "utf-8");
+        try {
+          const existingContent = readFileIfExistsSync(threadMetadataPath);
+          if (existingContent !== null) {
             const parseResult = SimpleThreadMetadataSchema.safeParse(JSON.parse(existingContent));
 
             if (parseResult.success) {
@@ -575,12 +578,12 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
                 name,
                 updatedAt: Date.now(),
               };
-              writeFileSync(threadMetadataPath, JSON.stringify(updated, null, 2));
+              writeFileAtomicSync(threadMetadataPath, JSON.stringify(updated, null, 2));
               emitLog("INFO", `[thread-naming] Generated name: "${name}"${usedFallback ? " (fallback model)" : ""}`);
             }
-          } catch (err) {
-            emitLog("ERROR", `[thread-naming] Failed to update metadata: ${err}`);
           }
+        } catch (err) {
+          emitLog("ERROR", `[thread-naming] Failed to update metadata: ${err}`);
         }
 
         if (usedFallback) {
@@ -668,11 +671,10 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
 
     for (const repoDir of repoDirs) {
       const settingsPath = join(reposDir, repoDir, "settings.json");
-      if (!existsSync(settingsPath)) continue;
-
-      let content: string;
+      let content: string | null;
       try {
-        content = readFileSync(settingsPath, "utf-8");
+        content = readFileIfExistsSync(settingsPath);
+        if (content === null) continue;
       } catch {
         continue;
       }
@@ -723,7 +725,7 @@ export class SimpleRunnerStrategy implements RunnerStrategy {
       };
       settings.lastUpdated = Date.now();
 
-      writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+      writeFileAtomicSync(settingsPath, JSON.stringify(settings, null, 2));
       emitLog("INFO", `[worktree_rename] Wrote updated settings to ${settingsPath}`);
       return;
     }
