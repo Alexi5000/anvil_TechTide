@@ -73,6 +73,14 @@ describe("Hook handler", () => {
     rmSync(dataDir, { recursive: true, force: true });
   });
 
+  it.each(["../escape", "a/b", "a\\b", "..", "/absolute", "a".repeat(201)])("rejects unsafe thread ID %s before writing", async (threadId) => {
+    const result = await post(server, "/hooks/session-start", { cwd: "/tmp" }, {
+      "x-anvil-thread-id": threadId,
+    });
+    expect(result.status).toBe(400);
+    expect(existsSync(join(dataDir, "threads"))).toBe(false);
+  });
+
   describe("POST /hooks/session-start", () => {
     it("responds with empty JSON on success", async () => {
       const res = await post(server, "/hooks/session-start", { cwd: "/tmp" }, {

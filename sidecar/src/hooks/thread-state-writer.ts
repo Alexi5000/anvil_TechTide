@@ -8,8 +8,8 @@
 
 import { threadReducer, type ThreadAction } from "@core/lib/thread-reducer.js";
 import type { ThreadState } from "@core/types/events.js";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileIfExistsSync, writeFileAtomicSync } from "@core/lib/secure-fs.js";
+import { threadFilePath } from "./thread-path.js";
 import type { EventBroadcaster } from "../push.js";
 import type { SidecarLogger } from "../logger.js";
 
@@ -59,15 +59,11 @@ export class ThreadStateWriter {
     this.broadcastUpdate(threadId, action);
   }
 
-  private threadDir(threadId: string): string {
-    return join(this.dataDir, "threads", threadId);
-  }
-
   private loadFromDisk(threadId: string): ThreadState | undefined {
-    const statePath = join(this.threadDir(threadId), "state.json");
     try {
-      if (!existsSync(statePath)) return undefined;
-      return JSON.parse(readFileSync(statePath, "utf-8")) as ThreadState;
+      const statePath = threadFilePath(this.dataDir, threadId, "state.json");
+      const content = readFileIfExistsSync(statePath);
+      return content === null ? undefined : JSON.parse(content) as ThreadState;
     } catch (err) {
       this.log.warn(`Failed to load state for thread ${threadId}: ${err}`);
       return undefined;
@@ -75,10 +71,9 @@ export class ThreadStateWriter {
   }
 
   private writeToDisk(threadId: string, state: ThreadState): void {
-    const dir = this.threadDir(threadId);
     try {
-      mkdirSync(dir, { recursive: true });
-      writeFileSync(join(dir, "state.json"), JSON.stringify(state));
+      const statePath = threadFilePath(this.dataDir, threadId, "state.json");
+      writeFileAtomicSync(statePath, JSON.stringify(state), { mode: 0o600 });
     } catch (err) {
       this.log.error(`Failed to write state for thread ${threadId}: ${err}`);
     }

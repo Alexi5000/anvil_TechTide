@@ -10,7 +10,9 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { lookup } from "mime-types";
-import { readFile, stat, writeFile, unlink, mkdir } from "node:fs/promises";
+import { open, unlink, mkdir } from "node:fs/promises";
+import { constants } from "node:fs";
+import { writeFileAtomic } from "@core/lib/secure-fs.js";
 import { resolve, extname, join } from "node:path";
 import { handleConnection } from "./ws-handler.js";
 import { createState } from "./state.js";
@@ -83,12 +85,18 @@ app.get("/files", async (req, res) => {
 
   const resolved = resolve(filePath);
   try {
-    const info = await stat(resolved);
-    if (!info.isFile()) {
-      res.status(404).send("Not a file");
-      return;
+    const handle = await open(resolved, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0));
+    let content: Buffer;
+    try {
+      const info = await handle.stat();
+      if (!info.isFile()) {
+        res.status(404).send("Not a file");
+        return;
+      }
+      content = await handle.readFile();
+    } finally {
+      await handle.close();
     }
-    const content = await readFile(resolved);
     const mimeType =
       lookup(extname(resolved)) || "application/octet-stream";
     res.setHeader("Content-Type", mimeType);
@@ -151,9 +159,10 @@ async function writePortFile(): Promise<void> {
   if (!path) return;
   try {
     await mkdir(DATA_DIR, { recursive: true });
-    await writeFile(
+    await writeFileAtomic(
       path,
       JSON.stringify({ port: actualPort, appSuffix: APP_SUFFIX, pid: process.pid, token: authToken }),
+      { mode: 0o600 },
     );
   } catch (err) {
     log.error(`Failed to write port file: ${err}`);

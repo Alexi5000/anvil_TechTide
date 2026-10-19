@@ -5,8 +5,8 @@
  * Enables post-session review, cost tracking, and file change tracking.
  */
 
-import { appendFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { appendFileSync, closeSync, constants, fstatSync, openSync } from "node:fs";
+import { threadFilePath } from "./thread-path.js";
 import type { SidecarLogger } from "../logger.js";
 
 export interface LifecycleEvent {
@@ -23,12 +23,15 @@ export class EventWriter {
 
   /** Append a lifecycle event to the thread's events.jsonl file. */
   write(threadId: string, event: LifecycleEvent): void {
-    const dir = join(this.dataDir, "threads", threadId);
-    const filePath = join(dir, "events.jsonl");
-
     try {
-      mkdirSync(dir, { recursive: true });
-      appendFileSync(filePath, JSON.stringify(event) + "\n");
+      const filePath = threadFilePath(this.dataDir, threadId, "events.jsonl");
+      const fd = openSync(filePath, constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
+      try {
+        if (!fstatSync(fd).isFile()) throw new Error("Expected a regular event file");
+        appendFileSync(fd, JSON.stringify(event) + "\n");
+      } finally {
+        closeSync(fd);
+      }
     } catch (err) {
       this.log.warn(`[event-writer] Failed to write event for ${threadId}: ${err}`);
     }
