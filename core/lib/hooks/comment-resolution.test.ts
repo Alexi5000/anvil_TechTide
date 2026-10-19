@@ -5,6 +5,7 @@ describe("parseCommentResolution", () => {
   it("returns null for non-anvil commands", () => {
     expect(parseCommentResolution("ls -la")).toBeNull();
     expect(parseCommentResolution("echo hello")).toBeNull();
+    expect(parseCommentResolution("anvil-resolve-comment-extra abc")).toBeNull();
   });
 
   it("parses single ID", () => {
@@ -22,8 +23,8 @@ describe("parseCommentResolution", () => {
     expect(result).toEqual({ ids: ["a", "b", "c"] });
   });
 
-  it("returns null for anvil-resolve-comment with no args", () => {
-    expect(parseCommentResolution("anvil-resolve-comment")).toBeNull();
+  it("returns empty IDs for anvil-resolve-comment with no args", () => {
+    expect(parseCommentResolution("anvil-resolve-comment")).toEqual({ ids: [] });
   });
 
   it("handles leading whitespace", () => {

@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
+import { writeFileAtomicSync } from "@core/lib/secure-fs.js";
 import { join } from "path";
 import { logger } from "../logger.js";
 
@@ -87,7 +88,7 @@ export function rollUpCostToParent(
     parentMeta.cumulativeCostUsd =
       (parentMeta.cumulativeCostUsd ?? 0) + childTreeCost;
     parentMeta.updatedAt = Date.now();
-    writeFileSync(parentPath, JSON.stringify(parentMeta, null, 2));
+    writeFileAtomicSync(parentPath, JSON.stringify(parentMeta, null, 2));
   } catch (err) {
     logger.warn(
       `[budget] Failed to roll up cost to parent ${parentThreadId}: ${err}`,

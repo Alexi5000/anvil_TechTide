@@ -9,6 +9,13 @@
  * Run with: cd agents && pnpm test thread-history-live.test.ts
  */
 
+import { mkdtempSync as makePrivateFixture, rmSync as removePrivateFixture } from "node:fs";
+import { join as privateJoin } from "node:path";
+import { tmpdir as fixtureTmpRoot } from "node:os";
+import { afterAll as cleanupPrivateFixture } from "vitest";
+const privateFixture = makePrivateFixture(privateJoin(fixtureTmpRoot(), "anvil-fixture-"));
+cleanupPrivateFixture(() => removePrivateFixture(privateFixture, { recursive: true, force: true }));
+
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdirSync, readFileSync, existsSync, rmSync } from "fs";
 import { join } from "path";
@@ -132,7 +139,7 @@ describe("Thread History - Live Multi-Turn Test", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    testDir = join(tmpdir(), `thread-history-live-${randomUUID()}`);
+    testDir = join(privateFixture, `thread-history-live-${randomUUID()}`);
     threadPath = join(testDir, "thread");
     mkdirSync(threadPath, { recursive: true });
 
@@ -337,3 +344,5 @@ describe("Thread History - Live Multi-Turn Test", () => {
     expect(responseText.toLowerCase()).not.toContain(testUuid.toLowerCase());
   }, 60000);
 });
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

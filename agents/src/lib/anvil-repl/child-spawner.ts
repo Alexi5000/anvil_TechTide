@@ -1,5 +1,6 @@
 import { spawn as spawnProcess } from "child_process";
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
+import { mkdirSync, readFileSync, existsSync } from "fs";
+import { readFileIfExistsSync, writeFileAtomicSync } from "@core/lib/secure-fs.js";
 import { join } from "path";
 import crypto from "crypto";
 import { runnerPath } from "../../runner.js";
@@ -69,11 +70,12 @@ export class ChildSpawner {
       // Write cancelled status to disk (source of truth for next app refresh)
       try {
         const metadataPath = join(threadPath, "metadata.json");
-        if (existsSync(metadataPath)) {
-          const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
+        const metadataRaw = readFileIfExistsSync(metadataPath);
+        if (metadataRaw !== null) {
+          const metadata = JSON.parse(metadataRaw);
           metadata.status = "cancelled";
           metadata.updatedAt = Date.now();
-          writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+          writeFileAtomicSync(metadataPath, JSON.stringify(metadata, null, 2));
         }
       } catch (err) {
         logger.warn(`[anvil-repl] Failed to write cancelled status for ${threadId}: ${err}`);
@@ -154,7 +156,7 @@ export class ChildSpawner {
     };
 
     mkdirSync(childThreadPath, { recursive: true });
-    writeFileSync(
+    writeFileAtomicSync(
       join(childThreadPath, "metadata.json"),
       JSON.stringify(childMetadata, null, 2),
     );
@@ -167,7 +169,7 @@ export class ChildSpawner {
       timestamp: now,
       toolStates: {},
     };
-    writeFileSync(
+    writeFileAtomicSync(
       join(childThreadPath, "state.json"),
       JSON.stringify(initialState, null, 2),
     );
@@ -196,12 +198,13 @@ export class ChildSpawner {
     generateThreadName(prompt)
       .then(({ name }) => {
         const metadataPath = join(childThreadPath, "metadata.json");
-        if (!existsSync(metadataPath)) return;
+        const metadataRaw = readFileIfExistsSync(metadataPath);
+        if (metadataRaw === null) return;
 
-        const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
+        const metadata = JSON.parse(metadataRaw);
         metadata.name = name;
         metadata.updatedAt = Date.now();
-        writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+        writeFileAtomicSync(metadataPath, JSON.stringify(metadata, null, 2));
 
         this.emitEvent(
           EventName.THREAD_NAME_GENERATED,

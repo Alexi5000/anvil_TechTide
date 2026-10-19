@@ -1,3 +1,10 @@
+import { mkdtempSync as makePrivateFixture, rmSync as removePrivateFixture } from "node:fs";
+import { join as privateJoin } from "node:path";
+import { tmpdir as fixtureTmpRoot } from "node:os";
+import { afterAll as cleanupPrivateFixture } from "vitest";
+const privateFixture = makePrivateFixture(privateJoin(fixtureTmpRoot(), "anvil-fixture-"));
+cleanupPrivateFixture(() => removePrivateFixture(privateFixture, { recursive: true, force: true }));
+
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { MessageHandler } from "./message-handler.js";
 import type {
@@ -584,7 +591,7 @@ describe("MessageHandler", () => {
       );
 
       // Create handler with anvilDir so child thread routing activates
-      const tmpDir = "/tmp/test-anvil";
+      const tmpDir = privateJoin(privateFixture, "test-anvil");
       childHandler = new MessageHandler(tmpDir);
 
       // Mock hub client
@@ -977,3 +984,13 @@ describe("MessageHandler", () => {
     });
   });
 });
+
+vi.mock("@core/lib/secure-fs.js", async () => {
+  const fs = await import("fs");
+  return {
+    writeFileAtomicSync: (path: string, data: string) => fs.writeFileSync(path, data),
+    readFileIfExistsSync: (path: string) => fs.existsSync(path) ? fs.readFileSync(path, "utf8") : null,
+  };
+});
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

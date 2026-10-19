@@ -1,3 +1,10 @@
+import { mkdtempSync as makePrivateFixture, rmSync as removePrivateFixture } from "node:fs";
+import { join as privateJoin } from "node:path";
+import { tmpdir as fixtureTmpRoot } from "node:os";
+import { afterAll as cleanupPrivateFixture } from "vitest";
+const privateFixture = makePrivateFixture(privateJoin(fixtureTmpRoot(), "anvil-fixture-"));
+cleanupPrivateFixture(() => removePrivateFixture(privateFixture, { recursive: true, force: true }));
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdirSync, writeFileSync, readFileSync, rmSync } from "fs";
 import { join } from "path";
@@ -45,7 +52,7 @@ describe("propagateModeToChildren", () => {
 
   beforeEach(() => {
     anvilDir = join(
-      tmpdir(),
+      privateFixture,
       `anvil-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     );
     threadsDir = join(anvilDir, "threads");
@@ -190,7 +197,7 @@ describe("propagateModeToChildren", () => {
     mockedGetHubClient.mockReturnValue(null);
 
     // Use an anvilDir with no threads directory
-    const emptyDir = join(tmpdir(), `anvil-empty-${Date.now()}`);
+    const emptyDir = join(privateFixture, `anvil-empty-${Date.now()}`);
     mkdirSync(emptyDir, { recursive: true });
 
     // Should not throw
@@ -313,3 +320,5 @@ describe("propagateModeToChildren", () => {
     expect(readMetadata("completed-of-p1").permissionMode).toBe("plan");
   });
 });
+
+vi.mock("../../runner.js", () => ({ runnerPath: "/test/runner.js" }));

@@ -1,4 +1,4 @@
-import { writeFileSync, readFileSync, existsSync } from "fs";
+import { readFileIfExistsSync, writeFileAtomicSync } from "@core/lib/secure-fs.js";
 import { join, isAbsolute, relative } from "path";
 import { z } from "zod";
 import type { ThreadWriter } from "./services/thread-writer.js";
@@ -170,10 +170,10 @@ async function writeStateToDisk(payload: ThreadState): Promise<void> {
       await threadWriter.writeState(payload);
     } catch (err) {
       logger.warn(`[output] Failed to write state via ThreadWriter: ${err}`);
-      writeFileSync(statePath, JSON.stringify(payload, null, 2));
+      writeFileAtomicSync(statePath, JSON.stringify(payload, null, 2));
     }
   } else {
-    writeFileSync(statePath, JSON.stringify(payload, null, 2));
+    writeFileAtomicSync(statePath, JSON.stringify(payload, null, 2));
   }
 }
 
@@ -317,8 +317,8 @@ export async function writeUsageToMetadata(
   cumulativeUsage: TokenUsage | undefined,
 ): Promise<void> {
   try {
-    if (!existsSync(mdPath)) return;
-    const raw = readFileSync(mdPath, "utf-8");
+    const raw = readFileIfExistsSync(mdPath);
+    if (raw === null) return;
     const metadata = JSON.parse(raw);
     metadata.lastCallUsage = lastCallUsage;
     metadata.cumulativeUsage = cumulativeUsage;
@@ -328,10 +328,10 @@ export async function writeUsageToMetadata(
       try {
         await threadWriter.writeMetadata(metadata);
       } catch {
-        writeFileSync(mdPath, JSON.stringify(metadata, null, 2));
+        writeFileAtomicSync(mdPath, JSON.stringify(metadata, null, 2));
       }
     } else {
-      writeFileSync(mdPath, JSON.stringify(metadata, null, 2));
+      writeFileAtomicSync(mdPath, JSON.stringify(metadata, null, 2));
     }
   } catch (err) {
     logger.warn(`[output] Failed to write usage to metadata: ${err}`);
@@ -348,8 +348,8 @@ async function writeCostToMetadata(
 ): Promise<void> {
   if (costUsd === undefined) return;
   try {
-    if (!existsSync(mdPath)) return;
-    const raw = readFileSync(mdPath, "utf-8");
+    const raw = readFileIfExistsSync(mdPath);
+    if (raw === null) return;
     const metadata = JSON.parse(raw);
     metadata.totalCostUsd = costUsd;
     metadata.updatedAt = Date.now();
@@ -358,10 +358,10 @@ async function writeCostToMetadata(
       try {
         await threadWriter.writeMetadata(metadata);
       } catch {
-        writeFileSync(mdPath, JSON.stringify(metadata, null, 2));
+        writeFileAtomicSync(mdPath, JSON.stringify(metadata, null, 2));
       }
     } else {
-      writeFileSync(mdPath, JSON.stringify(metadata, null, 2));
+      writeFileAtomicSync(mdPath, JSON.stringify(metadata, null, 2));
     }
   } catch (err) {
     logger.warn(`[output] Failed to write cost to metadata: ${err}`);

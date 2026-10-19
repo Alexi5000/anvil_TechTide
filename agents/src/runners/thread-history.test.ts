@@ -6,6 +6,13 @@
  * prior messages when responding to follow-up prompts.
  */
 
+import { mkdtempSync as makePrivateFixture, rmSync as removePrivateFixture } from "node:fs";
+import { join as privateJoin } from "node:path";
+import { tmpdir as fixtureTmpRoot } from "node:os";
+import { afterAll as cleanupPrivateFixture } from "vitest";
+const privateFixture = makePrivateFixture(privateJoin(fixtureTmpRoot(), "anvil-fixture-"));
+cleanupPrivateFixture(() => removePrivateFixture(privateFixture, { recursive: true, force: true }));
+
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdirSync, writeFileSync, existsSync, rmSync } from "fs";
 import { join } from "path";
@@ -33,6 +40,7 @@ vi.mock("../output.js", () => ({
   setSessionId: vi.fn(async () => {}),
   getHubClient: vi.fn(),
   updateFileChange: vi.fn(),
+  updateUsage: vi.fn(),
 }));
 
 // Mock the logger
@@ -66,7 +74,7 @@ describe("Thread History - loadPriorMessages", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    testDir = join(tmpdir(), `thread-history-test-${randomUUID()}`);
+    testDir = join(privateFixture, `thread-history-test-${randomUUID()}`);
     mkdirSync(testDir, { recursive: true });
     capturedMessages = undefined;
     capturedPrompt = undefined;
@@ -179,7 +187,7 @@ describe("Thread History - End-to-End Resume Flow", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    testDir = join(tmpdir(), `thread-history-e2e-${randomUUID()}`);
+    testDir = join(privateFixture, `thread-history-e2e-${randomUUID()}`);
     mkdirSync(testDir, { recursive: true });
   });
 
@@ -408,3 +416,5 @@ describe("Thread History - Path Construction", () => {
     expect(stateJsonPath).toBe(historyFilePath);
   });
 });
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

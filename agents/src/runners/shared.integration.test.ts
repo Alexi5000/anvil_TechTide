@@ -5,6 +5,13 @@
  * Verifies that tools are correctly marked as complete via hooks.
  */
 
+import { mkdtempSync as makePrivateFixture, rmSync as removePrivateFixture } from "node:fs";
+import { join as privateJoin } from "node:path";
+import { tmpdir as fixtureTmpRoot } from "node:os";
+import { afterAll as cleanupPrivateFixture } from "vitest";
+const privateFixture = makePrivateFixture(privateJoin(fixtureTmpRoot(), "anvil-fixture-"));
+cleanupPrivateFixture(() => removePrivateFixture(privateFixture, { recursive: true, force: true }));
+
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   createMockScript,
@@ -49,6 +56,7 @@ vi.mock("../output.js", () => ({
   setSessionId: vi.fn(async () => {}),
   getHubClient: vi.fn(),
   updateFileChange: vi.fn(),
+  updateUsage: vi.fn(),
 }));
 
 // Mock the logger
@@ -72,13 +80,13 @@ describe("runAgentLoop - tool completion via hooks", () => {
   const baseConfig: RunnerConfig = {
     agent: "simple",
     prompt: "Test prompt",
-    anvilDir: "/tmp/anvil",
+    anvilDir: privateJoin(privateFixture, "anvil"),
     threadId: "test-thread-id",
   };
 
   const baseContext: OrchestrationContext = {
-    workingDir: "/tmp/test",
-    threadPath: "/tmp/test-thread",
+    workingDir: privateJoin(privateFixture, "test"),
+    threadPath: privateJoin(privateFixture, "test-thread"),
     threadId: "test-thread-id",
   };
 
@@ -114,7 +122,7 @@ describe("runAgentLoop - tool completion via hooks", () => {
           toolCalls: [
             {
               name: "Read",
-              input: { file_path: "/tmp/test.txt" },
+              input: { file_path: privateJoin(privateFixture, "test.txt") },
               mockResult: "file contents here",
             },
           ],
@@ -175,8 +183,8 @@ describe("runAgentLoop - tool completion via hooks", () => {
       responses: [
         {
           toolCalls: [
-            { name: "Read", input: { file_path: "/tmp/a.txt" }, mockResult: "content a" },
-            { name: "Write", input: { file_path: "/tmp/b.txt", content: "hi" }, mockResult: "OK" },
+            { name: "Read", input: { file_path: privateJoin(privateFixture, "a.txt") }, mockResult: "content a" },
+            { name: "Write", input: { file_path: privateJoin(privateFixture, "b.txt"), content: "hi" }, mockResult: "OK" },
           ],
         },
         { content: "Done with both tools." },
@@ -241,7 +249,7 @@ describe("runAgentLoop - tool completion via hooks", () => {
           toolCalls: [
             {
               name: "Read",
-              input: { file_path: "/tmp/test.txt" },
+              input: { file_path: privateJoin(privateFixture, "test.txt") },
               mockResult: "specific content from hook",
             },
           ],
@@ -265,3 +273,5 @@ describe("runAgentLoop - tool completion via hooks", () => {
     expect(hasSpecificContent).toBe(true);
   });
 });
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

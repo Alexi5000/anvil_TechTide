@@ -6,7 +6,8 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import type { StoredMessage } from "@core/types/events.js";
 import { relative, isAbsolute, join, resolve } from "path";
-import { readFileSync, writeFileSync, readdirSync, realpathSync, mkdirSync, existsSync } from "fs";
+import { readFileSync, readdirSync, realpathSync, mkdirSync } from "fs";
+import { readFileIfExistsSync, writeFileAtomicSync } from "@core/lib/secure-fs.js";
 import crypto from "crypto";
 import { parsePhases } from "../lib/phase-parser.js";
 import {
@@ -155,8 +156,8 @@ export function propagateModeToChildren(
   for (const entry of entries) {
     const metadataPath = join(threadsDir, entry, "metadata.json");
     try {
-      if (!existsSync(metadataPath)) continue;
-      const raw = readFileSync(metadataPath, "utf-8");
+      const raw = readFileIfExistsSync(metadataPath);
+      if (raw === null) continue;
       const metadata = JSON.parse(raw);
 
       if (metadata.parentThreadId !== parentThreadId) continue;
@@ -174,7 +175,7 @@ export function propagateModeToChildren(
       // Persist to disk so mode survives restarts
       metadata.permissionMode = modeId;
       metadata.updatedAt = Date.now();
-      writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+      writeFileAtomicSync(metadataPath, JSON.stringify(metadata, null, 2));
     } catch {
       // Child thread may have been cleaned up — skip
     }
@@ -817,7 +818,7 @@ export async function runAgentLoop(
 
             try {
               mkdirSync(childThreadPath, { recursive: true });
-              writeFileSync(
+              writeFileAtomicSync(
                 join(childThreadPath, "metadata.json"),
                 JSON.stringify(childMetadata, null, 2)
               );
@@ -838,7 +839,7 @@ export async function runAgentLoop(
                 wipMap: {},
                 blockIdMap: {},
               };
-              writeFileSync(
+              writeFileAtomicSync(
                 join(childThreadPath, "state.json"),
                 JSON.stringify(initialState, null, 2)
               );
@@ -879,11 +880,12 @@ export async function runAgentLoop(
               generateThreadName(taskPrompt)
                 .then(({ name: generatedName, usedFallback }) => {
                   const metadataPath = join(childThreadPath, "metadata.json");
-                  if (existsSync(metadataPath)) {
-                    const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
+                  const metadataRaw = readFileIfExistsSync(metadataPath);
+                  if (metadataRaw !== null) {
+                    const metadata = JSON.parse(metadataRaw);
                     metadata.name = generatedName;
                     metadata.updatedAt = Date.now();
-                    writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+                    writeFileAtomicSync(metadataPath, JSON.stringify(metadata, null, 2));
                     emitEvent(EventName.THREAD_NAME_GENERATED, {
                       threadId: childThreadId,
                       name: generatedName,
@@ -1008,7 +1010,7 @@ export async function runAgentLoop(
                       if (!threadMetadata.planId) {
                         threadMetadata.planId = planId;
                         threadMetadata.updatedAt = Date.now();
-                        writeFileSync(threadMetadataPath, JSON.stringify(threadMetadata, null, 2));
+                        writeFileAtomicSync(threadMetadataPath, JSON.stringify(threadMetadata, null, 2));
                         emitEvent(EventName.THREAD_UPDATED, {
                           threadId: context.threadId,
                         }, "PostToolUse:plan-association");
@@ -1158,8 +1160,9 @@ export async function runAgentLoop(
 
                 // === Update metadata.json ===
                 let childAgentType = "unknown";
-                if (existsSync(metadataPath)) {
-                  const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
+                const metadataRaw = readFileIfExistsSync(metadataPath);
+                if (metadataRaw !== null) {
+                  const metadata = JSON.parse(metadataRaw);
                   childAgentType = metadata.agentType ?? "unknown";
 
                   metadata.status = "completed";
@@ -1193,7 +1196,7 @@ export async function runAgentLoop(
                   }
 
                   metadata.updatedAt = Date.now();
-                  writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+                  writeFileAtomicSync(metadataPath, JSON.stringify(metadata, null, 2));
                   logger.info(`[PostToolUse:SubAgent] Updated metadata for thread ${childThreadId}`);
 
                   // Roll up child's tree cost to parent's cumulativeCostUsd
@@ -1218,8 +1221,9 @@ export async function runAgentLoop(
 
                   let state: ThreadState;
 
-                  if (existsSync(statePath)) {
-                    state = JSON.parse(readFileSync(statePath, "utf-8")) as ThreadState;
+                  const stateRaw = readFileIfExistsSync(statePath);
+                  if (stateRaw !== null) {
+                    state = JSON.parse(stateRaw) as ThreadState;
                   } else {
                     state = {
                       messages: [],
@@ -1240,7 +1244,7 @@ export async function runAgentLoop(
                   state.status = "complete";
                   state.timestamp = Date.now();
 
-                  writeFileSync(statePath, JSON.stringify(state, null, 2));
+                  writeFileAtomicSync(statePath, JSON.stringify(state, null, 2));
                   logger.info(`[PostToolUse:SubAgent] Appended final response to state.json`);
                 }
 
@@ -1316,11 +1320,12 @@ export async function runAgentLoop(
               if (childThreadId) {
                 const childThreadPath = join(config.anvilDir, "threads", childThreadId);
                 const metadataPath = join(childThreadPath, "metadata.json");
-                if (existsSync(metadataPath)) {
-                  const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
+                const metadataRaw = readFileIfExistsSync(metadataPath);
+                if (metadataRaw !== null) {
+                  const metadata = JSON.parse(metadataRaw);
                   metadata.status = "error";
                   metadata.updatedAt = Date.now();
-                  writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+                  writeFileAtomicSync(metadataPath, JSON.stringify(metadata, null, 2));
                 }
                 // Send ERROR action via hub (triggers markOrphanedTools in reducer)
                 const hub = getHubClient();
