@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isThreadId, threadFilePath } from "../hooks/thread-path.js";
@@ -45,6 +45,20 @@ describe("thread filesystem boundary", () => {
     await writer.dispatch("thread-1", { type: "INIT", payload: { workingDirectory: dir } });
     new EventWriter(data, log).sessionStarted("thread-1", dir);
     expect(readFileSync(target, "utf8")).toBe("unchanged");
+  });
+
+  it("does not create external targets through dangling file symlinks", async () => {
+    const data = join(dir, "data");
+    const threadDir = join(data, "threads", "thread-1");
+    mkdirSync(threadDir, { recursive: true });
+    const target = join(dir, "missing.json");
+    symlinkSync(target, join(threadDir, "state.json"));
+    symlinkSync(target, join(threadDir, "events.jsonl"));
+    await new ThreadStateWriter(data, new EventBroadcaster(), log).dispatch("thread-1", {
+      type: "INIT", payload: { workingDirectory: dir },
+    });
+    new EventWriter(data, log).sessionStarted("thread-1", dir);
+    expect(existsSync(target)).toBe(false);
   });
 
   it("persists valid state and events privately", async () => {
