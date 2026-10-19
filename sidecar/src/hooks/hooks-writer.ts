@@ -6,7 +6,8 @@
  * as an env var since it varies per PTY session.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
+import { writeFileAtomicSync } from "@core/lib/secure-fs.js";
 import { join } from "node:path";
 
 interface HttpHook {
@@ -67,8 +68,9 @@ export function writeHooksJson(anvilDir: string, port: number, token?: string): 
   const authHeader = token ? `Bearer ${token}` : null;
   const config = buildHooksConfig(baseUrl, authHeader);
 
-  writeFileSync(
+  writeFileAtomicSync(
     join(hooksDir, "hooks.json"),
     JSON.stringify({ hooks: config }, null, 2) + "\n",
+    { mode: 0o600 },
   );
 }

@@ -10,7 +10,8 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
 import { lookup } from "mime-types";
-import { readFile, stat, writeFile, unlink, mkdir } from "node:fs/promises";
+import { readFile, stat, unlink, mkdir } from "node:fs/promises";
+import { writeFileAtomic } from "@core/lib/secure-fs.js";
 import { resolve, extname, join } from "node:path";
 import { handleConnection } from "./ws-handler.js";
 import { createState } from "./state.js";
@@ -151,9 +152,10 @@ async function writePortFile(): Promise<void> {
   if (!path) return;
   try {
     await mkdir(DATA_DIR, { recursive: true });
-    await writeFile(
+    await writeFileAtomic(
       path,
       JSON.stringify({ port: actualPort, appSuffix: APP_SUFFIX, pid: process.pid, token: authToken }),
+      { mode: 0o600 },
     );
   } catch (err) {
     log.error(`Failed to write port file: ${err}`);

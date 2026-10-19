@@ -9,12 +9,13 @@
 
 import { createServer, type Server } from "node:http";
 import { WebSocketServer, WebSocket } from "ws";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { handleConnection } from "../ws-handler.js";
 import { createState } from "../state.js";
 
 let server: Server;
 let port: number;
+const clients = new Set<WebSocket>();
 
 function startServer(): Promise<void> {
   server = createServer();
@@ -59,28 +60,38 @@ function stopServer(): Promise<void> {
 
 function connectWs(path: string): Promise<WebSocket> {
   const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`);
+  clients.add(ws);
   return new Promise((resolve, reject) => {
     ws.once("open", () => resolve(ws));
     ws.once("error", reject);
   });
 }
 
-function waitForMessage(ws: WebSocket, timeoutMs = 3000): Promise<unknown> {
+function waitForMessage(ws: WebSocket, expectedId?: number, timeoutMs = 3000): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error("Timed out waiting for message")),
-      timeoutMs,
-    );
-    ws.once("message", (data) => {
+    const onMessage = (data: WebSocket.RawData) => {
+      const message = JSON.parse(String(data));
+      if (expectedId !== undefined && message.id !== expectedId) return;
       clearTimeout(timeout);
-      resolve(JSON.parse(String(data)));
-    });
+      ws.off("message", onMessage);
+      resolve(message);
+    };
+    const timeout = setTimeout(() => {
+      ws.off("message", onMessage);
+      reject(new Error("Timed out waiting for message"));
+    }, timeoutMs);
+    ws.on("message", onMessage);
   });
 }
 
 describe("Agent hub round-trip", () => {
   beforeAll(async () => {
     await startServer();
+  });
+
+  afterEach(() => {
+    for (const client of clients) client.terminate();
+    clients.clear();
   });
 
   afterAll(async () => {
@@ -103,7 +114,7 @@ describe("Agent hub round-trip", () => {
 
     await new Promise((r) => setTimeout(r, 100));
 
-    const listPromise = waitForMessage(frontend);
+    const listPromise = waitForMessage(frontend, 1);
     frontend.send(JSON.stringify({ id: 1, cmd: "list_connected_agents", args: {} }));
     const listResponse = (await listPromise) as { id: number; result: string[] };
 
@@ -166,7 +177,7 @@ describe("Agent hub round-trip", () => {
     await new Promise((r) => setTimeout(r, 100));
 
     const agentMsgPromise = waitForMessage(agent);
-    const sendPromise = waitForMessage(frontend);
+    const sendPromise = waitForMessage(frontend, 2);
     const testMessage = JSON.stringify({ type: "cancel" });
     frontend.send(JSON.stringify({
       id: 2,
@@ -188,7 +199,7 @@ describe("Agent hub round-trip", () => {
   it("get_agent_socket_path returns WS URL", async () => {
     const frontend = await connectWs("/ws");
 
-    const pathPromise = waitForMessage(frontend);
+    const pathPromise = waitForMessage(frontend, 3);
     frontend.send(JSON.stringify({ id: 3, cmd: "get_agent_socket_path", args: {} }));
     const pathResponse = (await pathPromise) as { id: number; result: string };
 

@@ -9,7 +9,9 @@
 import { generateThreadName } from "@core/lib/naming/thread-name.js";
 import { generateWorktreeName } from "@core/lib/naming/worktree-name.js";
 import { createAnthropicLlmCaller } from "./sdk-caller.js";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { readFileIfExistsSync, writeFileAtomicSync } from "@core/lib/secure-fs.js";
+import { threadFilePath } from "./thread-path.js";
 import { join } from "node:path";
 import { dataDirPath } from "../dispatch/paths.js";
 import type { EventBroadcaster } from "../push.js";
@@ -88,12 +90,14 @@ function updateMetadataName(
   name: string,
   deps: NamingDeps,
 ): void {
-  const metadataPath = join(deps.dataDir, "threads", threadId, "metadata.json");
   try {
-    const raw = JSON.parse(readFileSync(metadataPath, "utf-8"));
+    const metadataPath = threadFilePath(deps.dataDir, threadId, "metadata.json");
+    const content = readFileIfExistsSync(metadataPath);
+    if (content === null) return;
+    const raw = JSON.parse(content);
     raw.name = name;
     raw.updatedAt = Date.now();
-    writeFileSync(metadataPath, JSON.stringify(raw, null, 2));
+    writeFileAtomicSync(metadataPath, JSON.stringify(raw, null, 2), { mode: 0o600 });
   } catch (err) {
     deps.log.warn(`[naming] Failed to update metadata for ${threadId}: ${err}`);
   }

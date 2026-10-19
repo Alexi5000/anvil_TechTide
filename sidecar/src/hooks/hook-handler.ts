@@ -19,6 +19,8 @@ import { initiateNaming } from "./naming.js";
 import type { EventBroadcaster } from "../push.js";
 import type { SidecarLogger } from "../logger.js";
 
+import { isThreadId } from "./thread-path.js";
+
 const THREAD_ID_HEADER = "x-anvil-thread-id";
 
 interface HookHandlerDeps {
@@ -54,6 +56,14 @@ export function createHookRouter(deps: HookHandlerDeps): Router {
 
   const router = Router();
   router.use(json());
+  router.use((req, res, next) => {
+    const threadId = req.headers[THREAD_ID_HEADER];
+    if (threadId !== undefined && !isThreadId(threadId)) {
+      res.status(400).json({ error: "Invalid thread ID" });
+      return;
+    }
+    next();
+  });
 
   // ── POST /hooks/user-prompt-submit ────────────────────────────────
 
