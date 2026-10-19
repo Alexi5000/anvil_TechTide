@@ -112,3 +112,21 @@ test("releases concurrency after clients disconnect", async () => {
   const result = await read(dir);
   expect(result.status).toBe(404);
 });
+
+
+test("expires stalled streams and releases their concurrency slot", async () => {
+  const path = join(dir, "stalled.bin");
+  const handle = await open(path, "w");
+  await handle.truncate(128 * 1024 * 1024);
+  await handle.close();
+  await start({ maxConcurrent: 1, timeoutMs: 100 });
+  const response = await new Promise<import("node:http").IncomingMessage>((resolve) => {
+    get(`${base}?path=${encodeURIComponent(path)}`, {
+      headers: { authorization: "Bearer test-token" },
+    }, resolve);
+  });
+  expect((await read(path)).status).toBe(429);
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  expect((await read(dir)).status).toBe(404);
+  response.destroy();
+});
