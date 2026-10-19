@@ -46,7 +46,12 @@ export function createFileHandler(options: {
         res.status(403).send("File is outside configured workspaces and selected files");
         return;
       }
-      if (resolved !== root && !resolved.startsWith(root.endsWith(sep) ? root : `${root}${sep}`)) {
+      if (resolved === root) {
+        res.status(404).send("Not a file");
+        return;
+      }
+      const prefix = root.endsWith(sep) ? root : `${root}${sep}`;
+      if (!resolved.startsWith(prefix)) {
         res.status(403).send("File is outside configured workspaces and selected files");
         return;
       }
