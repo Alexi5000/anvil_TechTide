@@ -8,7 +8,7 @@
 
 import express from "express";
 import { createServer, type Server } from "node:http";
-import { mkdirSync, rmSync, readFileSync, existsSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
@@ -45,8 +45,7 @@ export class SidecarTestHarness {
   private threadId = "";
 
   constructor(private options: HarnessOptions = {}) {
-    const id = `anvil-integration-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    this.dataDir = join(tmpdir(), id);
+    this.dataDir = mkdtempSync(join(tmpdir(), "anvil-integration-"));
     this.hooksDir = join(this.dataDir, "hooks");
     mkdirSync(this.hooksDir, { recursive: true });
   }

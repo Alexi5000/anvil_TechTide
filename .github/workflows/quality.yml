@@ -55,6 +55,9 @@ jobs:
       - name: Run smoke tests
         run: pnpm test:smoke
 
+      - name: Run transcript fixture regressions
+        run: pnpm exec vitest run core/lib/transcript/parser.test.ts
+
       - name: Run sidecar regression tests
         run: pnpm --dir sidecar test
 

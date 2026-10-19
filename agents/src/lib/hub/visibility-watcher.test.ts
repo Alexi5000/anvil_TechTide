@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { writeFileSync, mkdirSync, rmSync } from "fs";
+import { writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { VisibilityWatcher } from "./visibility-watcher.js";
@@ -40,8 +40,7 @@ describe("VisibilityWatcher", () => {
   let watcher: VisibilityWatcher;
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `visibility-watcher-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    mkdirSync(tmpDir, { recursive: true });
+    tmpDir = mkdtempSync(join(tmpdir(), "visibility-watcher-test-"));
     layoutPath = join(tmpDir, "pane-layout.json");
   });
 

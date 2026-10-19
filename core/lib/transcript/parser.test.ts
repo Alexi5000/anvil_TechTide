@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { writeFileSync, mkdirSync, rmSync } from "fs";
+import { writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { readTranscript, readTranscriptIncremental } from "./parser.js";
@@ -9,8 +9,7 @@ describe("readTranscript", () => {
   let transcriptPath: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `transcript-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = mkdtempSync(join(tmpdir(), "transcript-test-"));
     transcriptPath = join(testDir, "transcript.jsonl");
   });
 
@@ -136,8 +135,7 @@ describe("readTranscriptIncremental", () => {
   let transcriptPath: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `transcript-inc-test-${Date.now()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = mkdtempSync(join(tmpdir(), "transcript-inc-test-"));
     transcriptPath = join(testDir, "transcript.jsonl");
   });
 

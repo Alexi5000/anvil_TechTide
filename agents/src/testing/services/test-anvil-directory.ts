@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync, existsSync } from "fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
@@ -22,7 +22,7 @@ export class TestAnvilDirectory {
   private registeredRepos: Map<string, TestRepository> = new Map();
 
   constructor(private options: TestAnvilDirectoryOptions = {}) {
-    this.path = join(tmpdir(), `anvil-test-${randomUUID()}`);
+    this.path = mkdtempSync(join(tmpdir(), "anvil-test-"));
   }
 
   /**
