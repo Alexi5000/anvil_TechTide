@@ -173,7 +173,7 @@ export class AgentTestHarness {
           if (opts.queuedMessages && opts.queuedMessages.length > 0) {
             for (const qm of opts.queuedMessages) {
               messageTimers.push(setTimeout(() => {
-                if (!finished && !killed && this.mockHub) {
+                if (!finished && !killed && this.mockHub?.isConnected(threadId)) {
                   this.mockHub.sendQueuedMessage(threadId, qm.content);
                 }
               }, qm.delayMs));
