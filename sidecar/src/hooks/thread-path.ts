@@ -20,10 +20,12 @@ export function threadFilePath(dataDir: string, threadId: string, filename: "sta
   const threads = join(realRoot, "threads");
   mkdirSync(threads, { recursive: true, mode: 0o700 });
   requireContained(realRoot, realpathSync(threads));
-  const dir = join(threads, threadId);
+  const dir = resolve(threads, threadId);
+  if (!dir.startsWith(`${threads}${sep}`)) throw new Error("Thread path escapes data directory");
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   requireContained(realpathSync(threads), realpathSync(dir));
-  const path = join(dir, filename);
+  const path = resolve(dir, filename);
+  if (!path.startsWith(`${dir}${sep}`)) throw new Error("Thread path escapes data directory");
   try {
     requireContained(realpathSync(dir), realpathSync(path));
   } catch (error) {

@@ -6,6 +6,8 @@
  */
 
 import { appendFileSync, closeSync, constants, fstatSync, openSync } from "node:fs";
+import { realpathSync } from "node:fs";
+import { resolve, sep } from "node:path";
 import { threadFilePath } from "./thread-path.js";
 import type { SidecarLogger } from "../logger.js";
 
@@ -25,6 +27,7 @@ export class EventWriter {
   write(threadId: string, event: LifecycleEvent): void {
     try {
       const filePath = threadFilePath(this.dataDir, threadId, "events.jsonl");
+      if (!filePath.startsWith(`${realpathSync(resolve(this.dataDir))}${sep}`)) throw new Error("Event path escapes data directory");
       const fd = openSync(filePath, constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
       try {
         if (!fstatSync(fd).isFile()) throw new Error("Expected a regular event file");
