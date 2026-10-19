@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { randomUUID } from 'crypto';
 import type { ThreadInfo, PlanInfo } from '../../types.js';
 
 /**
@@ -56,9 +55,7 @@ export class AnvilFixture {
    * Must be called before any other operations.
    */
   async init(): Promise<void> {
-    const tmpBase = os.tmpdir();
-    const uniqueId = randomUUID().slice(0, 8);
-    this._anvilDir = path.join(tmpBase, `anvil-test-${uniqueId}`);
+    this._anvilDir = await fs.mkdtemp(path.join(os.tmpdir(), "anvil-test-"));
 
     // Create standard .anvil structure
     await fs.mkdir(this._anvilDir, { recursive: true });
