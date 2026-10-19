@@ -13,7 +13,7 @@ function requireContained(root: string, target: string): void {
 }
 
 export function threadFilePath(dataDir: string, threadId: string, filename: "state.json" | "metadata.json" | "events.jsonl"): string {
-  if (!isThreadId(threadId)) throw new Error("Invalid thread ID");
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$/.test(threadId)) throw new Error("Invalid thread ID");
   const root = resolve(dataDir);
   mkdirSync(root, { recursive: true, mode: 0o700 });
   const realRoot = realpathSync(root);
