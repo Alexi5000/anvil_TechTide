@@ -229,3 +229,5 @@ describe("MessageHandler Integration", () => {
     expect(mockCalls.complete[0]).toHaveProperty("numTurns");
   });
 });
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

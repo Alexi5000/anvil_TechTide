@@ -25,7 +25,8 @@ import { logger } from "../lib/logger.js";
 import { getChildThreadId, emitEvent } from "./shared.js";
 import type { QueuedAckManager } from "../lib/hub/queued-ack-manager.js";
 import { join } from "path";
-import { readFileSync, writeFileSync, existsSync } from "fs";
+import { readFileSync, existsSync } from "fs";
+import { readFileIfExistsSync, writeFileAtomicSync } from "@core/lib/secure-fs.js";
 import { EventName, type ThreadState } from "@core/types/events.js";
 import type { DrainManager } from "../lib/drain-manager.js";
 import { DrainEventName } from "@core/types/drain-events.js";
@@ -377,11 +378,12 @@ export class MessageHandler {
   ): void {
     const metadataPath = join(this.anvilDir!, "threads", childThreadId, "metadata.json");
     try {
-      if (!existsSync(metadataPath)) return;
-      const metadata = JSON.parse(readFileSync(metadataPath, "utf-8"));
+      const metadataRaw = readFileIfExistsSync(metadataPath);
+      if (metadataRaw === null) return;
+      const metadata = JSON.parse(metadataRaw);
       Object.assign(metadata, fields);
       if (!fields.updatedAt) metadata.updatedAt = Date.now();
-      writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+      writeFileAtomicSync(metadataPath, JSON.stringify(metadata, null, 2));
     } catch (err) {
       logger.warn(`[MessageHandler] Failed to update child metadata ${childThreadId}: ${err}`);
     }
@@ -563,7 +565,7 @@ export class MessageHandler {
   private async emitChildThreadState(childThreadId: string, state: ThreadState): Promise<void> {
     state.timestamp = Date.now();
     const statePath = join(this.anvilDir!, "threads", childThreadId, "state.json");
-    writeFileSync(statePath, JSON.stringify(state, null, 2));
+    writeFileAtomicSync(statePath, JSON.stringify(state, null, 2));
 
     // Emit THREAD_UPDATED so frontend refreshes this child's metadata
     emitEvent(EventName.THREAD_UPDATED, { threadId: childThreadId }, "MessageHandler:child-state");

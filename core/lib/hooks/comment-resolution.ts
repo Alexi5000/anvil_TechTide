@@ -13,13 +13,13 @@ export interface CommentResolutionResult {
  * Returns { ids: [] } if it matches but has invalid args.
  */
 export function parseCommentResolution(command: string): CommentResolutionResult | null {
-  if (!command.trimStart().startsWith("anvil-resolve-comment")) {
+  if (!/^anvil-resolve-comment(?:\s|$)/.test(command.trimStart())) {
     return null;
   }
 
   const argsMatch = command.match(/anvil-resolve-comment\s+["']?([^"']+)["']?/);
   if (!argsMatch) {
-    return null;
+    return { ids: [] };
   }
 
   const ids = argsMatch[1].split(",").map((id) => id.trim()).filter(Boolean);

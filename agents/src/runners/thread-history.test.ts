@@ -33,6 +33,7 @@ vi.mock("../output.js", () => ({
   setSessionId: vi.fn(async () => {}),
   getHubClient: vi.fn(),
   updateFileChange: vi.fn(),
+  updateUsage: vi.fn(),
 }));
 
 // Mock the logger
@@ -408,3 +409,5 @@ describe("Thread History - Path Construction", () => {
     expect(stateJsonPath).toBe(historyFilePath);
   });
 });
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

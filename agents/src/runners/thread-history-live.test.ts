@@ -337,3 +337,5 @@ describe("Thread History - Live Multi-Turn Test", () => {
     expect(responseText.toLowerCase()).not.toContain(testUuid.toLowerCase());
   }, 60000);
 });
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

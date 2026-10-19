@@ -159,20 +159,24 @@ export class AgentTestHarness {
 
       let killed = false;
       let timeoutId: NodeJS.Timeout | null = null;
+      const messageTimers: NodeJS.Timeout[] = [];
+      let finished = false;
 
       // Wait for agent to register, then schedule queued messages via WebSocket
       const setupQueuedMessages = async () => {
         try {
           await this.mockHub!.waitForRegistration(threadId, timeout);
 
+          if (finished) return;
+
           // Schedule queued messages to be sent via WebSocket
           if (opts.queuedMessages && opts.queuedMessages.length > 0) {
             for (const qm of opts.queuedMessages) {
-              setTimeout(() => {
-                if (!killed && this.mockHub) {
+              messageTimers.push(setTimeout(() => {
+                if (!finished && !killed && this.mockHub) {
                   this.mockHub.sendQueuedMessage(threadId, qm.content);
                 }
-              }, qm.delayMs);
+              }, qm.delayMs));
             }
           }
         } catch (err) {
@@ -213,6 +217,8 @@ export class AgentTestHarness {
       });
 
       proc.on("close", (code) => {
+        finished = true;
+        for (const timer of messageTimers) clearTimeout(timer);
         clearTimeoutHandler();
 
         // Collect messages from MockHubServer
@@ -236,6 +242,8 @@ export class AgentTestHarness {
       });
 
       proc.on("error", (err) => {
+        finished = true;
+        for (const timer of messageTimers) clearTimeout(timer);
         clearTimeoutHandler();
         reject(err);
       });

@@ -313,3 +313,5 @@ describe("propagateModeToChildren", () => {
     expect(readMetadata("completed-of-p1").permissionMode).toBe("plan");
   });
 });
+
+vi.mock("../../runner.js", () => ({ runnerPath: "/test/runner.js" }));

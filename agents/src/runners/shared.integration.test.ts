@@ -49,6 +49,7 @@ vi.mock("../output.js", () => ({
   setSessionId: vi.fn(async () => {}),
   getHubClient: vi.fn(),
   updateFileChange: vi.fn(),
+  updateUsage: vi.fn(),
 }));
 
 // Mock the logger
@@ -265,3 +266,5 @@ describe("runAgentLoop - tool completion via hooks", () => {
     expect(hasSpecificContent).toBe(true);
   });
 });
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

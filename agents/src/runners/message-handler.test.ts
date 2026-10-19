@@ -977,3 +977,13 @@ describe("MessageHandler", () => {
     });
   });
 });
+
+vi.mock("@core/lib/secure-fs.js", async () => {
+  const fs = await import("fs");
+  return {
+    writeFileAtomicSync: (path: string, data: string) => fs.writeFileSync(path, data),
+    readFileIfExistsSync: (path: string) => fs.existsSync(path) ? fs.readFileSync(path, "utf8") : null,
+  };
+});
+
+vi.mock("../runner.js", () => ({ runnerPath: "/test/runner.js" }));

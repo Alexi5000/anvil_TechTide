@@ -201,3 +201,11 @@ describe("output.ts - StoredMessage ID handling", () => {
     expect(msgs[1].id).toBe("id-2");
   });
 });
+
+vi.mock("@core/lib/secure-fs.js", async () => {
+  const fs = await import("fs");
+  return {
+    writeFileAtomicSync: (path: string, data: string) => fs.writeFileSync(path, data),
+    readFileIfExistsSync: (path: string) => fs.existsSync(path) ? fs.readFileSync(path, "utf8") : null,
+  };
+});

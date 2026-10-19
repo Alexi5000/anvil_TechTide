@@ -55,6 +55,9 @@ jobs:
       - name: Run smoke tests
         run: pnpm test:smoke
 
+      - name: Run agent regression tests
+        run: pnpm --dir agents test
+
   macos-native:
     name: Check macOS application
     runs-on: macos-latest
