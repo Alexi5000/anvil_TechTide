@@ -9,10 +9,10 @@ import express from "express";
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { WebSocketServer } from "ws";
-import { lookup } from "mime-types";
-import { readFile, stat, unlink, mkdir } from "node:fs/promises";
+import { unlink, mkdir } from "node:fs/promises";
 import { writeFileAtomic } from "@core/lib/secure-fs.js";
-import { resolve, extname, join } from "node:path";
+import { join } from "node:path";
+import { createFileHandler } from "./file-handler.js";
 import { handleConnection } from "./ws-handler.js";
 import { createState } from "./state.js";
 import { createLogger } from "./logger.js";
@@ -75,29 +75,7 @@ app.use("/hooks", createHookRouter({
 
 // ── File server (/files?path=<absolute-path>) ──────────────────────────
 
-app.get("/files", async (req, res) => {
-  const filePath = req.query.path;
-  if (typeof filePath !== "string" || !filePath) {
-    res.status(400).send("Missing 'path' query parameter");
-    return;
-  }
-
-  const resolved = resolve(filePath);
-  try {
-    const info = await stat(resolved);
-    if (!info.isFile()) {
-      res.status(404).send("Not a file");
-      return;
-    }
-    const content = await readFile(resolved);
-    const mimeType =
-      lookup(extname(resolved)) || "application/octet-stream";
-    res.setHeader("Content-Type", mimeType);
-    res.send(content);
-  } catch {
-    res.status(404).send("File not found");
-  }
-});
+app.get("/files", createFileHandler());
 
 // ── Health check ────────────────────────────────────────────────────────
 
