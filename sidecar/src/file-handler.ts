@@ -1,7 +1,7 @@
 import type { RequestHandler } from "express";
 import { constants } from "node:fs";
 import { open, realpath, stat } from "node:fs/promises";
-import { resolve, extname, relative, isAbsolute, sep } from "node:path";
+import { resolve, extname, dirname, sep } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { lookup } from "mime-types";
 
@@ -15,10 +15,8 @@ export function createFileHandler(options: {
   const timeoutMs = options.timeoutMs ?? 60_000;
   const roots = (options.roots ?? []).map((path) => resolve(path));
   const files = new Set((options.files ?? []).map((path) => resolve(path)));
-  const isAllowed = (path: string) => files.has(path) || roots.some((root) => {
-    const child = relative(root, path);
-    return child === "" || (!isAbsolute(child) && child !== ".." && !child.startsWith(`..${sep}`));
-  });
+  const isAllowed = (path: string) => files.has(path) || roots.some((root) =>
+    path === root || path.startsWith(root.endsWith(sep) ? root : `${root}${sep}`));
   let active = 0;
 
   return async (req, res) => {
@@ -41,7 +39,14 @@ export function createFileHandler(options: {
     let handle;
     try {
       const resolved = resolve(filePath);
-      if (!isAllowed(resolved)) {
+      const selected = [...files].find((file) => file === resolved);
+      const root = selected ? dirname(selected) : roots.find((root) =>
+        resolved === root || resolved.startsWith(root.endsWith(sep) ? root : `${root}${sep}`));
+      if (root === undefined) {
+        res.status(403).send("File is outside configured workspaces and selected files");
+        return;
+      }
+      if (resolved !== root && !resolved.startsWith(root.endsWith(sep) ? root : `${root}${sep}`)) {
         res.status(403).send("File is outside configured workspaces and selected files");
         return;
       }
@@ -50,14 +55,14 @@ export function createFileHandler(options: {
         res.status(403).send("File is outside configured workspaces and selected files");
         return;
       }
-      const before = await stat(canonical);
       handle = await open(canonical, constants.O_RDONLY | (constants.O_NONBLOCK ?? 0) | (constants.O_NOFOLLOW ?? 0));
       const info = await handle.stat();
       const openedPath = process.platform === "linux"
         ? await realpath(`/proc/self/fd/${handle.fd}`)
         : await realpath(canonical);
+      const current = await stat(openedPath);
       if (!isAllowed(openedPath) || openedPath !== canonical ||
-          info.dev !== before.dev || info.ino !== before.ino || !info.isFile()) {
+          info.dev !== current.dev || info.ino !== current.ino || !info.isFile()) {
         res.status(404).send("Not a file");
         return;
       }
