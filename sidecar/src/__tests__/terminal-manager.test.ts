@@ -134,14 +134,23 @@ describe("TerminalManager", () => {
     manager = new TerminalManager();
     broadcaster = createBroadcaster();
 
-    manager.spawn(80, 24, "/tmp", broadcaster);
+    const marker = "anvil-pty-output-ready";
+    const id = manager.spawn(80, 24, "/tmp", broadcaster, {
+      command: process.execPath,
+      args: ["-e", `process.stdout.write(${JSON.stringify(marker)})`],
+    });
 
-    // Wait for shell startup output
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const outputEvents = broadcaster.events.filter(
-      (e) => e.event === "terminal:output",
+    await vi.waitFor(
+      () => {
+        const output = broadcaster.events
+          .filter((event) => event.event === "terminal:output")
+          .map((event) => event.payload as { id: number; data: string })
+          .filter((payload) => payload.id === id)
+          .map((payload) => payload.data)
+          .join("");
+        expect(output).toContain(marker);
+      },
+      { timeout: 5000, interval: 20 },
     );
-    expect(outputEvents.length).toBeGreaterThan(0);
   });
 });
