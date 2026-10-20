@@ -7,9 +7,9 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import { createHookRouter } from "../hooks/hook-handler.js";
 import { EventBroadcaster } from "../push.js";
-import { mkdirSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { rmSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { createPrivateTempDir } from "@core/lib/secure-fs.js";
 import type { SidecarLogger } from "../logger.js";
 
 function createTestLogger(): SidecarLogger {
@@ -57,8 +57,7 @@ describe("Hook handler", () => {
   let server: Server;
 
   beforeEach(async () => {
-    dataDir = join(tmpdir(), `anvil-hook-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    mkdirSync(dataDir, { recursive: true });
+    dataDir = createPrivateTempDir("anvil-hook-test-");
     broadcaster = new EventBroadcaster();
 
     const app = makeApp(dataDir, broadcaster);
