@@ -7,10 +7,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdirSync, writeFileSync, rmSync } from "fs";
+import { writeFileSync, rmSync } from "fs";
 import { join } from "path";
-import { tmpdir } from "os";
-import { randomUUID } from "crypto";
+import { createPrivateTempDir } from "../../../../core/lib/secure-fs.js";
 import { nanoid } from "nanoid";
 
 /**
@@ -28,8 +27,7 @@ describe("loadPriorState — ID backfill", () => {
   let testDir: string;
 
   beforeEach(() => {
-    testDir = join(tmpdir(), `load-prior-state-test-${randomUUID()}`);
-    mkdirSync(testDir, { recursive: true });
+    testDir = createPrivateTempDir("load-prior-state-test-");
   });
 
   afterEach(() => {
@@ -103,7 +101,7 @@ describe("loadPriorState — ID backfill", () => {
       status: "complete",
     };
 
-    writeFileSync(stateFile, JSON.stringify(state));
+    writeFileSync(stateFile, JSON.stringify(state), { mode: 0o600, flag: "wx" });
     const loaded = JSON.parse(require("fs").readFileSync(stateFile, "utf-8"));
     const result = backfillIds(loaded.messages);
 

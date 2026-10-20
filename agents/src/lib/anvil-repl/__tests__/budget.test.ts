@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync, readFileSync, rmSync } from "fs";
 import { join } from "path";
-import { tmpdir } from "os";
+import { createPrivateTempDir } from "../../../../../core/lib/secure-fs.js";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { isOverBudget, rollUpCostToParent } from "../budget.js";
 
@@ -12,10 +12,7 @@ describe("budget", () => {
   let anvilDir: string;
 
   beforeEach(() => {
-    anvilDir = join(
-      tmpdir(),
-      `anvil-budget-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-    );
+    anvilDir = createPrivateTempDir("anvil-budget-test-");
     mkdirSync(join(anvilDir, "threads"), { recursive: true });
   });
 
@@ -32,6 +29,7 @@ describe("budget", () => {
     writeFileSync(
       join(threadDir, "metadata.json"),
       JSON.stringify(metadata, null, 2),
+      { mode: 0o600, flag: "wx" },
     );
   }
 
