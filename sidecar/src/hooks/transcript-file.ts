@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { homedir } from "node:os";
-import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, isAbsolute, join, resolve, sep } from "node:path";
 
 export function claudeTranscriptRoot(): string {
   const config = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
@@ -9,8 +9,7 @@ export function claudeTranscriptRoot(): string {
 }
 
 function contained(root: string, target: string): boolean {
-  const rel = relative(root, target);
-  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
+  return target.startsWith(root.endsWith(sep) ? root : root + sep);
 }
 
 export function readHookTranscript(root: string, filePath: unknown, sessionId: unknown): string {
