@@ -25,7 +25,7 @@ export async function execGh(
   args: string[],
   cwd: string,
 ): Promise<GhExecResult> {
-  logger.debug(`[GhCli] Executing: gh ${args.join(" ")}`, { cwd });
+  logger.debug(`[GhCli] Executing: gh ${args[0]}`, { cwd });
 
   const shellPath = await invoke<string>("get_shell_path");
   const command = Command.create("gh", args, {
@@ -41,7 +41,10 @@ export async function execGh(
   };
 
   if (result.code !== 0) {
-    logger.warn(`[GhCli] Command failed: gh ${args.join(" ")}`, {
+    for (const arg of args) {
+      if (arg.startsWith("config[secret]=")) result.stderr = result.stderr.split(arg.slice(15)).join("[redacted]");
+    }
+    logger.warn(`[GhCli] Command failed: gh ${args[0]}`, {
       code: result.code,
       stderr: result.stderr,
     });
@@ -64,7 +67,7 @@ export async function execGhJson<T>(
     return JSON.parse(result.stdout) as T;
   } catch {
     throw new Error(
-      `Failed to parse gh CLI JSON output for: gh ${args.join(" ")}`,
+      `Failed to parse gh CLI JSON output for: gh ${args[0]}`,
     );
   }
 }

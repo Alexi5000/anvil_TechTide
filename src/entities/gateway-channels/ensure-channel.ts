@@ -55,11 +55,11 @@ export async function ensureGatewayChannelForRepo(
     }
 
     // Retry webhook creation if the initial attempt failed
-    if (channel.webhookId == null) {
+    if (channel.webhookId == null || channel.webhookAuthVersion !== 1) {
       logger.info(`[ensureGatewayChannelForRepo] Channel ${channel.id} missing webhook, retrying...`);
       const updated = await createGitHubWebhook(channel, repo.sourcePath);
       if (updated.webhookId != null) {
-        await gatewayChannelService.updateMetadata(channel.id, { webhookId: updated.webhookId });
+        await gatewayChannelService.updateMetadata(channel.id, { webhookId: updated.webhookId, webhookAuthVersion: updated.webhookAuthVersion });
       }
     }
 

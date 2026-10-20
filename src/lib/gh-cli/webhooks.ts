@@ -95,3 +95,8 @@ export async function listWebhooks(
   );
   return z.array(WebhookSchema).parse(raw);
 }
+
+export async function updateWebhookSecret(cwd: string, hookId: number, secret: string): Promise<void> {
+  const repoSlug = await getRepoSlug(cwd);
+  await execGh(["api", `repos/${repoSlug}/hooks/${hookId}`, "--method", "PATCH", "-f", `config[secret]=${secret}`], cwd);
+}

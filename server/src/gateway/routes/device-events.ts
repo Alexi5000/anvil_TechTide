@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Redis } from "ioredis";
+import { authorizeDevice } from "../services/device-auth.js";
 import {
   readEvents,
   blockRead,
@@ -103,6 +104,7 @@ export function registerDeviceEventsRoute(
     "/devices/:deviceId/events",
     async (request, reply) => {
       const { deviceId } = request.params;
+      if (!authorizeDevice(request, deviceId)) return reply.status(401).send({ error: "Unauthorized device" });
       const rawLastEventId = request.headers["last-event-id"];
       const lastEventId =
         typeof rawLastEventId === "string" ? rawLastEventId : undefined;

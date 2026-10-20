@@ -1,3 +1,5 @@
+import { gatewayFetch as fetch } from "./setup.js";
+
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { randomUUID } from "crypto";
 import type { Redis } from "ioredis";

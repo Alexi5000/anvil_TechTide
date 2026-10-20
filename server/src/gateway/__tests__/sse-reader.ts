@@ -6,6 +6,8 @@
  * comments (lines starting with `:`).
  */
 
+import { gatewayFetch as fetch } from "./setup.js";
+
 export interface SSETestEvent {
   id: string;
   event: string;

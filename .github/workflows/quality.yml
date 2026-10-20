@@ -18,6 +18,12 @@ jobs:
     name: Build, lint, type-check, and test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -54,6 +60,12 @@ jobs:
 
       - name: Run smoke tests
         run: pnpm test:smoke
+
+      - name: Build and test authenticated gateway
+        run: |
+          pnpm --dir server build
+          pnpm --dir server test
+          pnpm exec vitest run core/gateway/client-auth.test.ts src/entities/gateway-channels/__tests__
 
       - name: Run transcript fixture regressions
         run: pnpm exec vitest run core/lib/transcript/parser.test.ts

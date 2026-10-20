@@ -10,6 +10,7 @@
  */
 
 import { fetch } from "@tauri-apps/plugin-http";
+import { loadGatewayToken } from "./auth";
 import { appData } from "@/lib/app-data-store";
 import { logger } from "@/lib/logger-client";
 import { GATEWAY_BASE_URL } from "@/lib/constants";
@@ -86,7 +87,7 @@ export class GatewayChannelService {
     logger.info(`[GatewayChannelService.create] POST ${GATEWAY_BASE_URL}/gateway/channels`);
     const response = await fetch(`${GATEWAY_BASE_URL}/gateway/channels`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${await loadGatewayToken()}` },
       body: JSON.stringify({ deviceId, type: "github", label }),
     });
     logger.info(`[GatewayChannelService.create] Response: ${response.status}`);
@@ -219,7 +220,7 @@ export class GatewayChannelService {
    */
   async updateMetadata(
     channelId: string,
-    updates: Partial<Pick<GatewayChannelMetadata, "webhookId">>,
+    updates: Partial<Pick<GatewayChannelMetadata, "webhookId" | "webhookAuthVersion">>,
   ): Promise<void> {
     const channel = useGatewayChannelStore.getState().getChannel(channelId);
     if (!channel) throw new Error(`Channel not found: ${channelId}`);

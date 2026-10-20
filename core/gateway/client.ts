@@ -16,6 +16,7 @@ export interface GatewayClientOptions {
   baseUrl: string;
   /** Device ID for SSE stream subscription */
   deviceId: string;
+  loadAuthToken?: () => Promise<string>;
   /** Load the last acknowledged Redis stream ID (platform-specific) */
   loadLastEventId: () => Promise<string | null>;
   /** Persist the last acknowledged Redis stream ID */
@@ -84,6 +85,7 @@ export class GatewayClient {
       const url = this.buildUrl();
       const headers: Record<string, string> = { Accept: "text/event-stream" };
       if (lastEventId) headers["Last-Event-ID"] = lastEventId;
+      if (this.options.loadAuthToken) headers.Authorization = `Bearer ${await this.options.loadAuthToken()}`;
 
       const fetchFn = this.options.fetch ?? globalThis.fetch;
       const response = await fetchFn(url, {
