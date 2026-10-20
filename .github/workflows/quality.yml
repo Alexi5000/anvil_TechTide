@@ -65,7 +65,7 @@ jobs:
         run: |
           pnpm --dir server build
           pnpm --dir server test
-          pnpm exec vitest run core/gateway/client-auth.test.ts src/entities/gateway-channels/__tests__
+          pnpm exec vitest run core/gateway/client-auth.test.ts src/entities/gateway-channels/__tests__ src/lib/gh-cli/__tests__/secure-input.test.ts
 
       - name: Run transcript fixture regressions
         run: pnpm exec vitest run core/lib/transcript/parser.test.ts

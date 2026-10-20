@@ -4,6 +4,7 @@
  */
 
 import { execGhJson, execGh } from "./executor";
+import { execGhJsonInput } from "./secure-input";
 import { getRepoSlug } from "./pr-queries";
 import { z } from "zod";
 
@@ -25,8 +26,7 @@ const CreateWebhookResponseSchema = z.object({
  * Events subscribed: pull_request, issue_comment, check_run, check_suite,
  * pull_request_review
  *
- * Uses gh api with -f/-F flags and bracket syntax for nested fields,
- * since Command.create doesn't support piping stdin.
+ * Sends signing secrets through stdin, never process arguments.
  */
 export async function createWebhook(
   cwd: string,
@@ -35,34 +35,14 @@ export async function createWebhook(
 ): Promise<{ id: number }> {
   const repoSlug = await getRepoSlug(cwd);
 
-  const result = await execGhJson(
-    [
-      "api",
-      `repos/${repoSlug}/hooks`,
-      "--method",
-      "POST",
-      "-f",
-      "name=web",
-      "-F",
-      "active=true",
-      "-f",
-      `config[url]=${webhookUrl}`,
-      "-f",
-      "config[content_type]=json",
-      "-f",
-      `config[secret]=${secret}`,
-      "-f",
-      "events[]=pull_request",
-      "-f",
-      "events[]=issue_comment",
-      "-f",
-      "events[]=check_run",
-      "-f",
-      "events[]=check_suite",
-      "-f",
-      "events[]=pull_request_review",
-    ],
+  const result = await execGhJsonInput(
+    ["api", `repos/${repoSlug}/hooks`, "--method", "POST"],
     cwd,
+    {
+      name: "web", active: true,
+      config: { url: webhookUrl, content_type: "json", secret },
+      events: ["pull_request", "issue_comment", "check_run", "check_suite", "pull_request_review"],
+    },
   );
 
   return CreateWebhookResponseSchema.parse(result);
@@ -98,5 +78,5 @@ export async function listWebhooks(
 
 export async function updateWebhookSecret(cwd: string, hookId: number, secret: string): Promise<void> {
   const repoSlug = await getRepoSlug(cwd);
-  await execGh(["api", `repos/${repoSlug}/hooks/${hookId}`, "--method", "PATCH", "-f", `config[secret]=${secret}`], cwd);
+  await execGhJsonInput(["api", `repos/${repoSlug}/hooks/${hookId}`, "--method", "PATCH"], cwd, { config: { secret } });
 }
