@@ -12,9 +12,9 @@ import express from "express";
 import { createServer, type Server } from "node:http";
 import { createHookRouter } from "../hooks/hook-handler.js";
 import { EventBroadcaster } from "../push.js";
-import { mkdirSync, rmSync, readFileSync, existsSync } from "node:fs";
+import { rmSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { createPrivateTempDir } from "@core/lib/secure-fs.js";
 import type { SidecarLogger } from "../logger.js";
 import type { ThreadState } from "@core/types/events.js";
 import type { LifecycleEvent } from "../hooks/event-writer.js";
@@ -65,8 +65,7 @@ describe("Hook lifecycle sequence", () => {
   const threadId = "lifecycle-seq-1";
 
   beforeEach(async () => {
-    dataDir = join(tmpdir(), `anvil-seq-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    mkdirSync(dataDir, { recursive: true });
+    dataDir = createPrivateTempDir("anvil-seq-");
     broadcaster = new EventBroadcaster();
 
     const app = express();

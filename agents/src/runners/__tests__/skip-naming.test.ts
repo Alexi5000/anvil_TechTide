@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdirSync, rmSync } from "fs";
 import { join } from "path";
-import { tmpdir } from "os";
+import { createPrivateTempDir } from "@core/lib/secure-fs.js";
 
 // Mock shared module for emitLog/emitEvent
 vi.mock("../shared.js", () => ({
@@ -47,8 +47,7 @@ describe("SimpleRunnerStrategy --skip-naming", () => {
   let tmpDir: string;
 
   beforeEach(() => {
-    tmpDir = join(tmpdir(), `anvil-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-    mkdirSync(tmpDir, { recursive: true });
+    tmpDir = createPrivateTempDir("anvil-test-");
     // Create a threads subdir for setup to use
     mkdirSync(join(tmpDir, "threads"), { recursive: true });
     vi.clearAllMocks();
