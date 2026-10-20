@@ -102,6 +102,7 @@ export function registerDeviceEventsRoute(
 ): void {
   fastify.get<{ Params: DeviceEventsParams }>(
     "/devices/:deviceId/events",
+    { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } },
     async (request, reply) => {
       const { deviceId } = request.params;
       if (!authorizeDevice(request, deviceId)) return reply.status(401).send({ error: "Unauthorized device" });

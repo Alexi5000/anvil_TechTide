@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { getRedis, closeRedis } from "./services/redis.js";
 import { registerChannelsRoute } from "./routes/channels.js";
 import { registerChannelEventsRoute } from "./routes/channel-events.js";
@@ -17,6 +18,10 @@ const gatewayPlugin: FastifyPluginAsync<GatewayPluginOptions> = async (
   opts
 ) => {
   const redis = getRedis(opts.redisUrl);
+  await fastify.register(rateLimit, {
+    global: true, redis, max: 600, timeWindow: "1 minute", skipOnError: false,
+    keyGenerator: request => request.socket.remoteAddress ?? "unknown",
+  });
   const parseJson = fastify.getDefaultJsonParser("error", "error");
   fastify.removeContentTypeParser("application/json");
   fastify.addContentTypeParser("application/json", { parseAs: "buffer" }, (request, body, done) => {

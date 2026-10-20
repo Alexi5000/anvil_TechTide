@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createHmac, randomUUID } from "node:crypto";
-import { startTestServer, stopTestServer, gatewayFetch } from "./setup.js";
+import { startTestServer, stopTestServer, gatewayFetch, getTestApp } from "./setup.js";
 import type { Redis } from "ioredis";
 
 let baseUrl: string;
@@ -26,6 +26,19 @@ describe("gateway authorization boundaries", () => {
     const stream = await fetch(`${baseUrl}/gateway/devices/${deviceId}/events`, { headers: { "Last-Event-ID": "9999999999999-0" } });
     expect(stream.status).toBe(401);
     expect(await redis.xlen(key)).toBe(1);
+  });
+
+  it("rate limits authorization attempts despite forged forwarding headers", async () => {
+    const app = getTestApp();
+    const deviceId = randomUUID();
+    for (let i = 0; i < 61; i++) {
+      const response = await app.inject({
+        method: "POST", url: "/gateway/channels", remoteAddress: "203.0.113.45",
+        headers: { "x-forwarded-for": `192.0.2.${i}`, "content-type": "application/json" },
+        payload: JSON.stringify({ deviceId, type: "github", label: "limited" }),
+      });
+      expect(response.statusCode).toBe(i < 60 ? 401 : 429);
+    }
   });
 
   it("binds each token to its own device", async () => {

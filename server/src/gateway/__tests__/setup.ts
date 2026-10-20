@@ -96,3 +96,5 @@ export async function gatewayFetch(input: string | URL | Request, init: RequestI
   }
   return globalThis.fetch(input, { ...init, headers });
 }
+
+export function getTestApp(): FastifyInstance { return app; }

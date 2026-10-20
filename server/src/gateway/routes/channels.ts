@@ -80,7 +80,7 @@ export function registerChannelsRoute(
   fastify: FastifyInstance,
   redis: Redis
 ): void {
-  fastify.post("/channels", async (request, reply) => {
+  fastify.post("/channels", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (request, reply) => {
     const parseResult = CreateChannelBodySchema.safeParse(request.body);
     if (!parseResult.success) {
       return reply.status(400).send({ error: parseResult.error.format() });
