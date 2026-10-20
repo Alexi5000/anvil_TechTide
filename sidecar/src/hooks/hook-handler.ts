@@ -119,6 +119,7 @@ export function createHookRouter(deps: HookHandlerDeps): Router {
       },
     });
 
+    transcriptReader.reset(threadId);
     eventWriter.sessionStarted(threadId, workingDirectory);
 
     res.json(continueResponse());
@@ -218,7 +219,7 @@ export function createHookRouter(deps: HookHandlerDeps): Router {
 
       // 3. Sync transcript for messages + usage
       if (transcriptPath) {
-        await transcriptReader.syncFromTranscript(threadId, transcriptPath);
+        await transcriptReader.syncFromTranscript(threadId, transcriptPath, body.session_id);
       }
     }
 
@@ -235,7 +236,7 @@ export function createHookRouter(deps: HookHandlerDeps): Router {
     if (threadId) {
       // Final transcript sync
       if (transcriptPath) {
-        await transcriptReader.syncFromTranscript(threadId, transcriptPath);
+        await transcriptReader.syncFromTranscript(threadId, transcriptPath, body.session_id);
       }
 
       // Mark thread complete

@@ -121,8 +121,15 @@ export function readTranscriptIncremental(
   filePath: string,
   fromLine: number,
 ): { transcript: ParsedTranscript; lastLine: number } {
-  const content = readFileSync(filePath, "utf-8");
+  return parseTranscriptIncremental(readFileSync(filePath, "utf-8"), fromLine);
+}
+
+export function parseTranscriptIncremental(
+  content: string,
+  fromLine: number,
+): { transcript: ParsedTranscript; lastLine: number } {
   const allLines = content.split("\n");
+  if (allLines.at(-1) === "") allLines.pop();
   const newLines = allLines.slice(fromLine);
   const transcript = parseLines(newLines, fromLine + 1);
   return { transcript, lastLine: allLines.length };
