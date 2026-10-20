@@ -15,6 +15,7 @@ export const GatewayChannelMetadataSchema = z.object({
   repoId: z.string().uuid().nullable().default(null),
   /** GitHub webhook ID for cleanup on delete */
   webhookId: z.number().nullable().default(null),
+  webhookAuthVersion: z.literal(1).optional(),
   /** Unix epoch milliseconds */
   createdAt: z.number(),
   /** Unix epoch milliseconds */

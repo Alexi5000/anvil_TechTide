@@ -5,6 +5,9 @@
  */
 
 import { appData } from "@/lib/app-data-store";
+import { fetch } from "@tauri-apps/plugin-http";
+import { GATEWAY_BASE_URL } from "@/lib/constants";
+import { loadGatewayToken } from "./auth";
 import { logger } from "@/lib/logger-client";
 import { GhCli } from "@/lib/gh-cli/client";
 import type { GatewayChannelMetadata } from "./types";
@@ -27,6 +30,15 @@ export async function createGitHubWebhook(
       return metadata;
     }
 
+    const response = await fetch(`${GATEWAY_BASE_URL}/gateway/channels`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${await loadGatewayToken()}` },
+      body: JSON.stringify({ deviceId: await loadDeviceId(), type: "github", label: metadata.label }),
+    });
+    if (!response.ok) throw new Error("Gateway authorization failed");
+    const registration = await response.json() as { channelId: string; webhookSecret?: string };
+    if (registration.channelId !== metadata.id || !registration.webhookSecret) throw new Error("Gateway signing configuration unavailable");
+
     // Check if a webhook already exists for this URL
     const existing = await ghCli.listWebhooks();
 
@@ -35,13 +47,13 @@ export async function createGitHubWebhook(
     );
     if (match) {
       logger.info(`${tag} Webhook already exists (id=${match.id})`);
-      return { ...metadata, webhookId: match.id };
+      await ghCli.updateWebhookSecret(match.id, registration.webhookSecret);
+      return { ...metadata, webhookId: match.id, webhookAuthVersion: 1 };
     }
 
-    // Create a new webhook (secret is empty for gateway-proxied webhooks)
-    const result = await ghCli.createWebhook(metadata.webhookUrl, "");
+    const result = await ghCli.createWebhook(metadata.webhookUrl, registration.webhookSecret);
     logger.info(`${tag} Created webhook id=${result.id}`);
-    return { ...metadata, webhookId: result.id };
+    return { ...metadata, webhookId: result.id, webhookAuthVersion: 1 };
   } catch (e) {
     logger.error(`${tag} Webhook creation failed:`, e);
     return metadata;

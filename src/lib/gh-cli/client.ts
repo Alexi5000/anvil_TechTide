@@ -29,6 +29,7 @@ import {
 } from "./pr-queries";
 import {
   createWebhook,
+  updateWebhookSecret,
   deleteWebhook,
   listWebhooks,
 } from "./webhooks";
@@ -107,6 +108,10 @@ export class GhCli {
   /**
    * Delete a webhook for this repository.
    */
+  async updateWebhookSecret(hookId: number, secret: string): Promise<void> {
+    return updateWebhookSecret(this.cwd, hookId, secret);
+  }
+
   async deleteWebhook(hookId: number): Promise<void> {
     return deleteWebhook(this.cwd, hookId);
   }

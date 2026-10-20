@@ -6,6 +6,7 @@
  */
 
 import { fetch } from "@tauri-apps/plugin-http";
+import { loadGatewayToken } from "./auth";
 import { GatewayClient } from "@core/gateway/client.js";
 import { appData } from "@/lib/app-data-store";
 import { eventBus } from "../events";
@@ -27,6 +28,7 @@ export function ensureConnected(deviceId: string): void {
   gatewayClient = new GatewayClient({
     baseUrl: GATEWAY_BASE_URL,
     deviceId,
+    loadAuthToken: loadGatewayToken,
     fetch,
     loadLastEventId: () => appData.readText(CHECKPOINT_PATH),
     saveLastEventId: (id) => appData.writeText(CHECKPOINT_PATH, id),

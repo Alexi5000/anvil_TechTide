@@ -137,3 +137,15 @@ export async function trimBefore(
   const key = streamKey(deviceId);
   await redis.xtrim(key, "MINID", minId);
 }
+
+export async function addSignedEvent(redis: Redis, deviceId: string, event: GatewayEvent, delivery: string, signature: string): Promise<boolean> {
+  const script = `
+    if redis.call("EXISTS", KEYS[2], KEYS[3]) > 0 then return 0 end
+    redis.call("XADD", KEYS[1], "MAXLEN", "~", 500, "*", unpack(ARGV))
+    redis.call("SET", KEYS[2], "1", "EX", 604800)
+    redis.call("SET", KEYS[3], "1", "EX", 604800)
+    return 1
+  `;
+  const inserted = await redis.eval(script, 3, streamKey(deviceId), `gateway:delivery:${event.channelId}:${delivery}`, `gateway:signature:${event.channelId}:${signature}`, ...serializeEvent(event));
+  return inserted === 1;
+}

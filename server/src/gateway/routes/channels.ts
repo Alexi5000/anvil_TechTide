@@ -1,4 +1,5 @@
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
+import { authorizeDevice } from "../services/device-auth.js";
 import type { FastifyInstance } from "fastify";
 import type { Redis } from "ioredis";
 import {
@@ -63,6 +64,7 @@ async function createChannel(
     type,
     label,
     createdAt: new Date().toISOString(),
+    webhookSecret: randomBytes(32).toString("hex"),
   };
 
   const pipeline = redis.pipeline();
@@ -78,21 +80,27 @@ export function registerChannelsRoute(
   fastify: FastifyInstance,
   redis: Redis
 ): void {
-  fastify.post("/channels", async (request, reply) => {
+  fastify.post("/channels", { config: { rateLimit: { max: 60, timeWindow: "1 minute" } } }, async (request, reply) => {
     const parseResult = CreateChannelBodySchema.safeParse(request.body);
     if (!parseResult.success) {
       return reply.status(400).send({ error: parseResult.error.format() });
     }
 
     const { deviceId, type, label } = parseResult.data;
+    if (!authorizeDevice(request, deviceId)) return reply.status(401).send({ error: "Unauthorized device" });
 
     const existing = await findExistingChannel(redis, deviceId, type, label);
     if (existing) {
+      if (!existing.webhookSecret) {
+        existing.webhookSecret = randomBytes(32).toString("hex");
+        await redis.set(channelKey(existing.channelId), JSON.stringify(existing));
+      }
       const protocol = request.protocol;
       const host = request.hostname;
       const webhookUrl = buildWebhookUrl(protocol, host, existing.channelId);
       return reply.status(200).send({
         channelId: existing.channelId,
+        webhookSecret: existing.webhookSecret,
         webhookUrl,
       });
     }
@@ -104,6 +112,7 @@ export function registerChannelsRoute(
 
     return reply.status(201).send({
       channelId: channel.channelId,
+      webhookSecret: channel.webhookSecret,
       webhookUrl,
     });
   });

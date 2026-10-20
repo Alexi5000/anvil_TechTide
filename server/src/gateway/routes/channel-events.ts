@@ -1,10 +1,10 @@
-import { randomUUID } from "crypto";
+import { randomUUID, createHmac, timingSafeEqual } from "crypto";
 import { z } from "zod";
 import type { FastifyInstance } from "fastify";
 import type { Redis } from "ioredis";
 import { ChannelSchema, type Channel } from "../types/channel.js";
 import type { GatewayEvent } from "../types/events.js";
-import { addEvent } from "../services/event-buffer.js";
+import { addSignedEvent } from "../services/event-buffer.js";
 
 const WebhookPayloadSchema = z.record(z.unknown());
 
@@ -44,6 +44,18 @@ export function registerChannelEventsRoute(
         return reply.status(404).send({ error: "Channel not found" });
       }
 
+      const signature = request.headers["x-hub-signature-256"];
+      const delivery = request.headers["x-github-delivery"];
+      if (!channel.webhookSecret || !request.gatewayRawBody || typeof signature !== "string" || !/^sha256=[a-f0-9]{64}$/.test(signature)) {
+        return reply.status(401).send({ error: "Invalid webhook signature" });
+      }
+      const expected = createHmac("sha256", channel.webhookSecret).update(request.gatewayRawBody).digest();
+      if (!timingSafeEqual(Buffer.from(signature.slice(7), "hex"), expected)) {
+        return reply.status(401).send({ error: "Invalid webhook signature" });
+      }
+      if (typeof delivery !== "string" || !/^[a-zA-Z0-9-]{1,128}$/.test(delivery)) {
+        return reply.status(400).send({ error: "Missing or invalid delivery ID" });
+      }
       const rawHeader = request.headers["x-github-event"];
       const githubEvent = typeof rawHeader === "string" ? rawHeader : "unknown";
 
@@ -60,7 +72,8 @@ export function registerChannelEventsRoute(
         receivedAt: Date.now(),
       };
 
-      await addEvent(redis, channel.deviceId, event);
+      const inserted = await addSignedEvent(redis, channel.deviceId, event, delivery, expected.toString("hex"));
+      if (!inserted) return reply.status(200).send({ duplicate: true });
 
       return reply.status(201).send({ eventId: event.id });
     }

@@ -1,8 +1,9 @@
+import { randomBytes, randomUUID, createHmac } from "node:crypto";
 import { buildApp } from "../../app.js";
 import { Redis } from "ioredis";
 import type { FastifyInstance } from "fastify";
 
-const REDIS_URL = "redis://localhost:6379";
+const REDIS_URL = process.env.TEST_REDIS_URL ?? "redis://localhost:6379";
 
 let app: FastifyInstance;
 let redis: Redis;
@@ -64,3 +65,36 @@ export async function stopTestServer(): Promise<void> {
     await redis.quit();
   }
 }
+
+const testTokens: Record<string, string> = {};
+const channelSecrets = new Map<string, string>();
+export async function gatewayFetch(input: string | URL | Request, init: RequestInit = {}): Promise<Response> {
+  const url = String(input);
+  const headers = new Headers(init.headers);
+  if (process.env.GATEWAY_BASE_URL) throw new Error("Provision explicit credentials for remote gateway testing");
+  if (url.endsWith("/gateway/channels") && typeof init.body === "string") {
+    const body = JSON.parse(init.body);
+    if (body.deviceId) {
+      testTokens[body.deviceId] ??= randomBytes(32).toString("hex");
+      process.env.ANVIL_GATEWAY_DEVICE_TOKENS = JSON.stringify(testTokens);
+      headers.set("Authorization", `Bearer ${testTokens[body.deviceId]}`);
+    }
+    const response = await globalThis.fetch(input, { ...init, headers });
+    if (response.ok) {
+      const channel = await response.clone().json() as { channelId: string; webhookSecret: string };
+      channelSecrets.set(channel.channelId, channel.webhookSecret);
+    }
+    return response;
+  }
+  const device = url.match(/\/devices\/([^/]+)\/events/);
+  if (device) headers.set("Authorization", `Bearer ${testTokens[device[1]]}`);
+  const channel = url.match(/\/channels\/([^/]+)\/events/);
+  const secret = channel ? channelSecrets.get(channel[1]) : undefined;
+  if (secret && typeof init.body === "string") {
+    headers.set("X-Hub-Signature-256", `sha256=${createHmac("sha256", secret).update(init.body).digest("hex")}`);
+    headers.set("X-GitHub-Delivery", randomUUID());
+  }
+  return globalThis.fetch(input, { ...init, headers });
+}
+
+export function getTestApp(): FastifyInstance { return app; }
