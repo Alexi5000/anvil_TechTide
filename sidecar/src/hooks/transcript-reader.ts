@@ -6,11 +6,12 @@
  * ThreadStateWriter.
  */
 
-import { readTranscriptIncremental } from "@core/lib/transcript/parser.js";
+import { parseTranscriptIncremental } from "@core/lib/transcript/parser.js";
 import type { TranscriptMessage, TokenUsage as TranscriptTokenUsage } from "@core/lib/transcript/types.js";
 import type { StoredMessage } from "@core/types/events.js";
 import type { ThreadStateWriter } from "./thread-state-writer.js";
 import type { SidecarLogger } from "../logger.js";
+import { claudeTranscriptRoot, readHookTranscript } from "./transcript-file.js";
 
 /**
  * Map transcript TokenUsage (snake_case-ish) to events TokenUsage (camelCase).
@@ -48,23 +49,31 @@ function transcriptToStoredMessage(msg: TranscriptMessage): StoredMessage {
 
 export class TranscriptReader {
   private cursors = new Map<string, number>();
+  private transcriptRoot = claudeTranscriptRoot();
+  private sessions = new Map<string, string>();
 
   constructor(
     private stateWriter: ThreadStateWriter,
     private log: SidecarLogger,
   ) {}
 
-  async syncFromTranscript(threadId: string, transcriptPath: string): Promise<void> {
-    const cursor = this.cursors.get(threadId) ?? 0;
+  async syncFromTranscript(threadId: string, transcriptPath: unknown, hookSessionId: unknown): Promise<void> {
+    const sessionId = this.stateWriter.getState(threadId)?.sessionId;
+    if (!sessionId || hookSessionId !== sessionId) {
+      this.log.warn(`Rejected transcript session for thread ${threadId}`);
+      return;
+    }
+    const cursor = this.sessions.get(threadId) === sessionId ? this.cursors.get(threadId) ?? 0 : 0;
 
     let result;
     try {
-      result = readTranscriptIncremental(transcriptPath, cursor);
+      result = parseTranscriptIncremental(readHookTranscript(this.transcriptRoot, transcriptPath, sessionId), cursor);
     } catch (err) {
       this.log.warn(`Failed to read transcript for thread ${threadId}: ${err}`);
       return;
     }
 
+    this.sessions.set(threadId, sessionId);
     this.cursors.set(threadId, result.lastLine);
     const { transcript } = result;
 
@@ -94,5 +103,6 @@ export class TranscriptReader {
   /** Reset cursor for a thread. */
   reset(threadId: string): void {
     this.cursors.delete(threadId);
+    this.sessions.delete(threadId);
   }
 }

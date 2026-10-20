@@ -48,6 +48,8 @@ The application is intended to be used with an agent runtime and one or more rep
 
 ## What Anvil provides
 
+Claude TUI hook transcripts are read only from the launched CLI configuration directory: `CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when unset. Set an absolute `CLAUDE_CONFIG_DIR` on the sidecar before starting it when using a custom Claude configuration. TUI launch inherits that same environment. Hook session IDs must match the thread's recorded session and transcript filename; arbitrary files, final symlinks, nonregular files, and paths escaping the configured transcript root are rejected. General transcript parser APIs remain available for trusted callers.
+
 The sidecar HTTP `/files` endpoint requires both authentication and a server-configured file allowlist. Before starting the sidecar, set `ANVIL_FILE_ROOTS` to a JSON array of absolute workspace directories and `ANVIL_SELECTED_FILES` to a JSON array of individual absolute file paths that may be previewed outside those workspaces. For example, `ANVIL_FILE_ROOTS='["/home/alex/projects/app"]'`. Restart the sidecar after changing either variable. Empty lists deny HTTP file previews by default. Use canonical paths; symlinks escaping the allowlist are denied. Native Tauri asset access and WebSocket filesystem commands are separate interfaces and are not restricted by these HTTP settings.
 
 | Capability | Why it matters |
