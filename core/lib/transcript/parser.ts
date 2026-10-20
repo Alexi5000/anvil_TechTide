@@ -129,7 +129,7 @@ export function parseTranscriptIncremental(
   fromLine: number,
 ): { transcript: ParsedTranscript; lastLine: number } {
   const allLines = content.split("\n");
-  if (allLines.at(-1) === "") allLines.pop();
+  if (allLines[allLines.length - 1] === "") allLines.pop();
   const newLines = allLines.slice(fromLine);
   const transcript = parseLines(newLines, fromLine + 1);
   return { transcript, lastLine: allLines.length };
