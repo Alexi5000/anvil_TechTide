@@ -1,7 +1,6 @@
-import { writeFileSync, unlinkSync } from "fs";
+import { writeFileSync, unlinkSync, rmdirSync, rmSync } from "fs";
 import { join } from "path";
-import { tmpdir } from "os";
-import { randomUUID } from "crypto";
+import { createPrivateTempDir } from "../../../core/lib/secure-fs.js";
 import { logger } from "../lib/logger.js";
 
 /**
@@ -40,13 +39,23 @@ export interface MockToolCall {
   mockError?: string;
 }
 
+const scriptDirectories = new Map<string, string>();
+
 /**
  * Create a mock script file for testing.
  * Returns the file path to pass via ANVIL_MOCK_LLM_PATH.
  */
 export function createMockScript(script: MockScript): string {
-  const path = join(tmpdir(), `mock-llm-${randomUUID()}.json`);
-  writeFileSync(path, JSON.stringify(script, null, 2));
+  const content = JSON.stringify(script, null, 2);
+  const directory = createPrivateTempDir("mock-llm-");
+  const path = join(directory, "script.json");
+  try {
+    writeFileSync(path, content, { mode: 0o600, flag: "wx" });
+  } catch (error) {
+    rmSync(directory, { recursive: true, force: true });
+    throw error;
+  }
+  scriptDirectories.set(path, directory);
   logger.debug(`[mock-llm] Created mock script at ${path}`);
   return path;
 }
@@ -60,6 +69,15 @@ export function cleanupMockScript(path: string): void {
     logger.debug(`[mock-llm] Cleaned up mock script at ${path}`);
   } catch {
     // Ignore cleanup errors
+  }
+  const directory = scriptDirectories.get(path);
+  if (directory) {
+    try {
+      rmdirSync(directory);
+      scriptDirectories.delete(path);
+    } catch {
+      return;
+    }
   }
 }
 
