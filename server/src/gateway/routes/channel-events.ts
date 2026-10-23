@@ -6,7 +6,7 @@ import { ChannelSchema, type Channel } from "../types/channel.js";
 import type { GatewayEvent } from "../types/events.js";
 import { addSignedEvent } from "../services/event-buffer.js";
 
-const WebhookPayloadSchema = z.record(z.unknown());
+const WebhookPayloadSchema = z.record(z.string(), z.unknown());
 
 interface ChannelEventsParams {
   channelId: string;

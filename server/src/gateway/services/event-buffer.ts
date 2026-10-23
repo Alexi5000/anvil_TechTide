@@ -3,7 +3,7 @@ import type { Redis } from "ioredis";
 import type { GatewayEvent } from "../types/events.js";
 
 const STREAM_MAX_LEN = 500;
-const PayloadSchema = z.record(z.unknown());
+const PayloadSchema = z.record(z.string(), z.unknown());
 
 function streamKey(deviceId: string): string {
   return `gateway:events:${deviceId}`;
