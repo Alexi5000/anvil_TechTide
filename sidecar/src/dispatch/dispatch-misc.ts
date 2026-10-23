@@ -5,7 +5,7 @@
 
 import { rm } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { extractArg, extractOptArg } from "../helpers.js";
 import {
@@ -293,7 +293,7 @@ function initializeShellEnv(state: SidecarState): boolean {
   checkDocumentsAccess();
 
   try {
-    const path = execSync(`${shell} -i -l -c "echo $PATH"`, {
+    const path = execFileSync(shell, ["-i", "-l", "-c", 'printf "%s" "$PATH"'], {
       encoding: "utf-8",
       timeout: 30_000,
     }).trim();
