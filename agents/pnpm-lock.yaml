@@ -24,9 +24,6 @@ importers:
       nanoid:
         specifier: ^5.1.16
         version: 5.1.16
-      node-forge:
-        specifier: file:../vendor/node-forge-1.4.0.tgz
-        version: file:../vendor/node-forge-1.4.0.tgz
       sucrase:
         specifier: ^3.35.1
         version: 3.35.1
@@ -40,9 +37,6 @@ importers:
       '@types/node':
         specifier: ^22.20.5
         version: 22.20.5
-      '@types/node-forge':
-        specifier: ^1.3.14
-        version: 1.3.14
       '@types/ws':
         specifier: ^8.18.2
         version: 8.18.2
@@ -482,9 +476,6 @@ packages:
   '@types/estree@1.0.9':
     resolution: {integrity: sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg==}
 
-  '@types/node-forge@1.3.14':
-    resolution: {integrity: sha512-mhVF2BnD4BO+jtOp7z1CdzaK4mbuK0LLQYAvdOLqHTavxFNq4zA1EmYkpnFjP8HOUzedfQkRnp0E2ulSAYSzAw==}
-
   '@types/node@22.20.5':
     resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
 
@@ -883,11 +874,6 @@ packages:
   negotiator@1.1.0:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
-
-  node-forge@file:../vendor/node-forge-1.4.0.tgz:
-    resolution: {integrity: sha512-xL71evkzfyT4AGifJa1GIl7otUNcJcX6WZV/AMJFJzzai0Yf1ANhGnXl7p1fBupuWgWQQK6JAsi+5UNKJskqoA==, tarball: file:../vendor/node-forge-1.4.0.tgz}
-    version: 1.4.0
-    engines: {node: '>= 6.13.0'}
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -1535,10 +1521,6 @@ snapshots:
 
   '@types/estree@1.0.9': {}
 
-  '@types/node-forge@1.3.14':
-    dependencies:
-      '@types/node': 22.20.5
-
   '@types/node@22.20.5':
     dependencies:
       undici-types: 6.21.0
@@ -1951,8 +1933,6 @@ snapshots:
   negotiator@1.1.0:
     dependencies:
       content-type: 2.1.0
-
-  node-forge@file:../vendor/node-forge-1.4.0.tgz: {}
 
   object-assign@4.1.1: {}
 

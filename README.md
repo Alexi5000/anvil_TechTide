@@ -159,22 +159,18 @@ GitHub Actions runs the required build, lint, type-check, and smoke-test gates o
 
 ## Security
 
-Known upstream advisory with no fixed release as of 2026-10-20:
+Dependency advisories:
 
 - **node-forge, [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv)**
   (CVE-2026-85393, high: RSA PKCS#1 v1.5 signature verification accepts extra nested
-  DigestAlgorithm elements). The advisory lists all versions up to and including 1.4.0 as
-  affected and no patched version (published 2026-09-03, updated 2026-10-01). `node-forge` is a
-  direct dependency of `agents/package.json`, so an `npm audit` override is not viable: there is
-  no fixed version to resolve to. Existing mitigation in this repository: PR #3 (`2be24b6`,
-  2026-10-18) replaced the registry package with `vendor/node-forge-1.4.0.tgz`, which is upstream
-  1.4.0 plus the narrowly scoped fix proposed in digitalbazaar/forge#1152
-  (`vendor/node-forge/upstream.patch`, `vendor/node-forge/integrity.json`), and
-  `scripts/verify-forge.cjs` runs in `pnpm build:ci` and in the `agents` build to fail on any
-  unpatched copy. Because the package name and version stay `node-forge@1.4.0`, GitHub still
-  reports one open Dependabot alert on `agents/package-lock.json`; it is intentionally not
-  dismissed and will be closed by moving to a released upstream fix.
-- `braces` is handled the same way (`vendor/braces-3.0.3.tgz`, `scripts/verify-braces.cjs`);
+  DigestAlgorithm elements; no patched release). `node-forge` was declared in
+  `agents/package.json` but never imported by any source file, so it has been removed from every
+  manifest and lockfile along with the earlier vendored backport (PR #3). RSA, X.509, and hashing
+  needs must use the built-in `node:crypto` module. `scripts/verify-no-forge.cjs` runs in
+  `pnpm build:ci` and in the `agents` build and fails if `node-forge` reappears, and
+  `agents/src/lib/__tests__/no-node-forge.test.ts` checks that guard and that `node:crypto`
+  rejects the malformed DigestInfo variants from the advisory.
+- `braces` is vendored and verified (`vendor/braces-3.0.3.tgz`, `scripts/verify-braces.cjs`);
   it has no open alert on this repository.
 
 For sensitive security reports, use GitHub's private vulnerability reporting for this
